@@ -1,0 +1,69 @@
+/* index.css */
+
+/* === CSS Variables (ตัวแปรหลัก) === */
+:root {
+  /* ล็อกคอนเทนเนอร์มือถือ */
+  --container: 430px;
+
+  /* fluid type */
+  --fs-12: clamp(.72rem, .68rem + .2vw, .8rem);
+  --fs-14: clamp(.84rem, .8rem + .2vw, .95rem);
+  --fs-16: clamp(.96rem, .9rem + .3vw, 1.05rem);
+  --fs-18: clamp(1.06rem, 1rem + .35vw, 1.15rem);
+  --fs-24: clamp(1.2rem, 1.05rem + .8vw, 1.45rem);
+  --fs-30: clamp(1.45rem, 1.1rem + 1.3vw, 2.1rem);
+
+  /* สีหลัก */
+  --primary: #10b981;   /* เขียวมิ้นต์ */
+  --muted: #6b7280;     /* เทาอ่อน */
+  --bg: #f9fafb;        /* พื้นหลัง */
+  --card: #ffffff;
+
+  /* safe-area สำหรับมือถือ */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* === Reset และ Layout หลัก === */
+html, body, #root, .App {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  background: var(--bg);
+  font-family: "Prompt", system-ui, sans-serif;
+  color: #111827;
+}
+
+/* Container หลัก */
+.container {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: 16px;
+  box-sizing: border-box;
+}
+
+/* เนื้อหาของแต่ละหน้า */
+.page {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* ปุ่มหลัก */
+button.primary {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: var(--primary);
+  color: white;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.primary:active {
+  opacity: 0.85;
+}

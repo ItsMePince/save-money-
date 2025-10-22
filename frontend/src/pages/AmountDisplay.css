@@ -1,0 +1,23 @@
+/* กล่องตัวเลข + หน่วย แยกสองคอลัมน์: [ตัวเลข 1fr][หน่วย auto] */
+.amount-display{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;    /* เส้นฐานตรงกันสวยงาม */
+  gap: 8px;
+  width: 100%;
+}
+
+/* ตัวเลขชิดขวา เห็นครบหนึ่งบรรทัด (ฟ้อนต์จะถูกคอมโพเนนต์ย่อให้พอดี) */
+.amount-display .num{
+  justify-self: end;
+  white-space: nowrap;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* หน่วยอยู่คอลัมน์ขวา ไม่ทับตัวเลข */
+.amount-display .unit{
+  color: var(--muted, #6b7280);
+  white-space: nowrap;
+}

@@ -1,0 +1,693 @@
+
+/* ===== Tokens ===== */
+:root {
+  --bg: #f5f7fa;
+  --bg-elev: #fff;
+  --text: #1f2937;
+  --muted: #4b5563;
+  --brand: #C4E7E0;
+  --accent1: #C4E7E0;
+  --accent2: #C4E7E0;
+  --warn: #ebffb7;
+  --gray300: #d1d5db;
+  --danger: #ef4444;
+  --r-sm: .5rem;
+  --r: .75rem;
+  --r-lg: 1rem;
+  --s-1: .5rem;
+  --s-2: .75rem;
+  --s-3: 1rem;
+  --s-4: 1.5rem;
+  --s-5: 2rem;
+  /* ล็อกคอนเทนเนอร์ให้สเกลแบบมือถือเสมอ */
+  --container: 430px;
+  /* fluid type (ยังใช้ได้ในกรอบมือถือ) */
+  --fs-12: clamp(.72rem, .68rem + .2vw, .8rem);
+  --fs-14: clamp(.84rem, .8rem + .2vw, .95rem);
+  --fs-16: clamp(.96rem, .9rem + .3vw, 1.05rem);
+  --fs-18: clamp(1.06rem, 1rem + .35vw, 1.15rem);
+  --fs-24: clamp(1.2rem, 1.05rem + .8vw, 1.45rem);
+  --fs-30: clamp(1.45rem, 1.1rem + 1.3vw, 2.1rem);
+  --safe-bottom: 0px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --bg-elev: #0f172a;
+    --text: #e5e7eb;
+    --muted: #cbd5e1;
+    --accent1: #10b981;
+    --accent2: #34d399;
+    --warn: #1f2937;
+    --gray300: #334155;
+    --danger: #f87171;
+  }
+}
+
+/* ===== Base ===== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0
+}
+
+html,body {
+  height: 100%
+}
+
+body {
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ล็อกความกว้างหน้าทั้งหมดให้เป็นมือถือ */
+html,
+body,
+.App {
+  max-width: var(--container);
+  margin-inline: auto;
+  overflow-x: hidden;
+}
+
+.App {
+  min-height: 100vh;
+  background: var(--bg)
+}
+
+/* main wrapper – centers and caps width */
+.main-content {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding-bottom: 5rem;
+  /* for bottom nav on mobile */
+}
+
+/* ===== Header ===== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: var(--s-3);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  backdrop-filter: saturate(1.1) blur(6px);
+}
+
+/* Force avatar to be a perfect circle */
+.header .profile-avatar{
+  width: 2.6rem;
+  height: 2.6rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 9999px !important;  /* ชนะทุกกฎที่ไปตัดวงกลม */
+  overflow: hidden;                   /* ตัดขอบให้กลมจริง */
+  background: #02BEA3 !important;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: .2px;
+}
+
+/* แสดงตัวอักษรจาก data-initial ที่ใส่ใน JSX */
+.header .profile-avatar::after{
+  content: attr(data-initial);
+  line-height: 1;
+}
+
+.username {
+  font-size: var(--fs-16);
+  color: var(--muted);
+  font-weight: 600
+}
+
+/* ===== Cards ===== */
+.balance-card {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent1) 0%, var(--accent2) 100%);
+  border-radius:  40px !important;
+  padding: var(--s-4);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .12);
+}
+
+.balance-display {
+  background: var(--warn);
+  border-radius: var(--r);
+  padding: var(--s-3);
+  text-align: center;
+  margin-bottom: var(--s-4)
+}
+
+.balance-label {
+  font-size: var(--fs-14);
+  color: var(--muted)
+}
+
+.balance-amount {
+  font-size: var(--fs-30);
+  font-weight: 800;
+  letter-spacing: .2px
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  padding-top: var(--s-2) 
+  
+}
+
+.action-button {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
+  cursor: pointer;
+  transition: transform .18s ease
+}
+
+.action-button:hover {
+  transform: translateY(-2px)
+}
+
+.action-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .1)
+}
+
+.action-label {
+  font-size: var(--fs-14);
+  font-weight: 500
+}
+
+.transaction-item {
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent1) 0%, var(--accent2) 100%);
+  border-radius: var(--r);
+  padding: var(--s-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .1)
+}
+
+.transaction-info {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2)
+}
+
+.transaction-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--gray300)
+}
+
+.transaction-description {
+  font-size: var(--fs-16);
+  color: var(--muted);
+  font-weight: 600
+}
+/* ขยับเนื้อหาภายในการ์ดเข้าไปจากขอบซ้าย/ขวาให้มากขึ้น */
+.transaction-item {
+  /* เดิม: padding: var(--s-3); -> 1 ค่า */
+  /* ใหม่: บังคับแนวนอนเป็น s-4 (กว้างขึ้น) */
+  padding: var(--s-3) var(--s-4) !important; 
+}
+
+/* เพิ่มระยะระหว่างวงกลม (avatar) กับข้อความ */
+.transaction-info {
+  gap: var(--s-3) !important;   /* เดิมใช้ var(--s-2) */
+}
+
+/* เผื่อบางธีม override gap ให้กันเหนียว ขยับตัวหนังสือออกอีกนิด */
+.transaction-info .transaction-description {
+  margin-inline-start: 4px !important;     /* ปรับเป็น 6–8px ได้ตามชอบ */
+}
+
+
+.transaction-amount {
+  font-size: var(--fs-16);
+  color: var(--danger);
+  font-weight: 700;
+  text-align: right
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-2)
+}
+
+.category-card {
+  background: linear-gradient(135deg, var(--accent1) 0%, var(--accent2) 100%);
+  border-radius: var(--r);
+  padding: var(--s-3);
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .1);
+  transition: transform .18s ease;
+  cursor: pointer
+}
+
+.category-card:hover {
+  transform: translateY(-2px)
+}
+
+.category-icon {
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  background: var(--gray300);
+  margin: 0 auto var(--s-2)
+}
+
+.category-name {
+  font-size: var(--fs-14);
+  font-weight: 600;
+  color: var(--muted)
+}
+
+.category-amount {
+  font-size: var(--fs-16);
+  font-weight: 700
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 5rem !important; 
+  background: var(--bg-elev);
+  border: 1px solid rgba(0, 0, 0, .06);
+  border-radius: 999px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .12);
+  padding-inline: .5rem;
+  z-index: 30;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: .25rem;
+  padding: .5rem
+}
+
+.nav-button {
+  background: none;
+  border: 0;
+  color: #000000
+(0,0,0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  cursor: pointer;
+  min-width: 3.8rem;
+  transition: transform .18s
+}
+
+.nav-button:hover {
+  transform: translateY(-2px)
+}
+
+.nav-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: #ccfbf1;
+  display: grid;
+  place-items: center
+}
+
+
+/* keyboard focus */
+:where(button, [role="button"], .category-card, .action-button, .nav-button):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  outline-offset: 2px;
+  border-radius: inherit
+}
+
+/* ===== Breakpoints (Neutralized for Mobile-Only) ===== */
+/* หมายเหตุ: คงไว้เฉพาะพฤติกรรมที่ "ไม่" ทำให้เลย์เอาต์กลายเป็นเดสก์ท็อป */
+@media (max-width:360px) {
+  .action-buttons {
+    grid-template-columns: repeat(2, 1fr)
+  }
+}
+
+/* ≥480px – ปรับเฉพาะตัวอักษร/spacing เล็กน้อย ไม่เปลี่ยนโครง */
+@media (min-width:480px) {
+  .balance-amount {
+    font-size: clamp(1.6rem, 1.2rem + 2vw, 2rem)
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-3)
+  }
+}
+
+/* ≥640px – เพิ่มระยะห่างแต่ไม่เปลี่ยนเป็นหลายคอลัมน์หลัก */
+@media (min-width:640px) {
+  .main-content {
+  gap: 0; /* ไม่ให้เว้นอัตโนมัติ */
+  }
+
+  .action-buttons {
+    grid-template-columns: repeat(4, 1fr)
+  }
+
+  .transaction-item {
+    padding: var(--s-8);
+    border-radius:  30px !important ;
+  }
+ 
+
+}
+
+/* ≥768px – แค่ขยายขนาดบางชิ้น ไม่เปลี่ยนเลย์เอาต์ */
+@media (min-width:768px) {
+  .header {
+    padding: var(--s-4)
+  }
+
+  .profile-avatar {
+    width: 3rem;
+    height: 3rem
+  }
+
+  .username {
+    font-size: var(--fs-18)
+  }
+
+  .main-content {
+    padding-bottom: 2rem
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(4, 1fr)
+  }
+}
+
+/* ≥1024px – ยกเลิกเลย์เอาต์ 2 คอลัมน์เดิม โดยคง single-column ไว้ */
+@media (min-width:1024px) {
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    max-width: var(--container);
+    margin: 2rem auto;
+  }
+
+  .balance-card {
+    align-self: stretch;
+    padding: var(--s-4);
+    border-radius: var(--r-lg)
+  }
+
+  .balance-display {
+    padding: var(--s-3);
+    margin-bottom: var(--s-4)
+  }
+
+  .balance-amount {
+    font-size: clamp(1.8rem, 1.2rem + 1.2vw, 2.1rem)
+  }
+
+  .action-buttons {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--s-3)
+  }
+
+  .action-icon {
+    width: 3.25rem;
+    height: 3.25rem
+  }
+
+  .transaction-item {
+    padding: var(--s-3);
+    border-radius: var(--r);
+    font-size: 1rem
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+    align-self: stretch;
+    gap: var(--s-2);
+    position: static;
+    top: auto;
+  }
+
+
+
+  /* keep centered */
+}
+
+/* ≥1280px – ยังล็อกขนาดเท่าเดิม ไม่บวมบนจอใหญ่ */
+@media (min-width:1280px) {
+  .main-content {
+    max-width: var(--container)
+  }
+
+  .balance-amount {
+    font-size: 2.1rem
+  }
+}
+/* Recent Transactions Header */
+.transaction-header,
+.transaction-header * {
+  font-weight: 600;
+}
+
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1rem 0;
+  padding: 0 1rem; /* เพิ่มระยะห่างซ้าย-ขวา */
+}
+
+
+.transaction-title {
+  font-weight: bold;
+  color: #374151;
+  cursor: pointer;
+}
+
+/* เพิ่มเส้นใต้สีน้ำเงิน */
+.transaction-title.active {
+  padding-bottom: 2px;
+}
+
+/* ใช้ได้ทั้งเป็น <span> หรือ <button> */
+.transaction-link {
+  font-size: 0.9rem;
+  color: #374151;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+/* ==== Action buttons: no circle + vertical dividers ==== */
+
+/* เอาช่องว่างระหว่างคอลัมน์ออก เพื่อให้เส้นขั้นชิดสวย */
+.action-buttons {
+  gap: 0 !important;
+}
+
+/* ทำเส้นขั้นระหว่างคอลัมน์ (ยกเว้นตัวแรก) */
+.action-button {
+  flex: 1;                          /* ให้แต่ละปุ่มกว้างเท่ากัน */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;          /* จัดกึ่งกลางแนวตั้ง */
+  padding: .5rem 1rem;
+  border-right: 1px solid rgba(31,41,55,.6);
+}
+.action-button:last-child {
+  border-right: none;
+}
+
+/* ยกเลิกรูปทรงวงกลมของไอคอนตัวเลข */
+.action-icon {
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: block !important;
+  place-items: initial !important; /* เผื่อมีค่าจากเดิม */
+  text-align: center;
+}
+
+/* ป้ายชื่อใต้ตัวเลข */
+.action-label {
+  margin-top: .25rem;
+  font-weight: 600;
+}
+
+/* (ตัวเลือก) ให้ขนาดตัวเลขดูเข้มชัดขึ้นบนพื้นหลัง */
+.action-icon span {
+  filter: none;
+}
+/* ตัด gap ออก และบังคับความสูงคงที่ของแถว */
+.action-buttons{
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 0 !important;
+  min-height: 92px;              /* ปรับความสูงของแถวได้ที่นี่ */
+  align-items: stretch;
+}
+
+/* จัดเนื้อหาแต่ละคอลัมน์ให้อยู่กึ่งกลางแนวตั้ง+แนวนอน */
+.action-button{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;       /* กึ่งกลางแนวตั้ง */
+  align-items: center;           /* กึ่งกลางแนวนอน */
+  padding: .5rem 1rem !important;
+  border-right: none !important; /* ไม่ใช้ border เพื่อไม่ให้กินพื้นที่ */
+  min-height: 100%;              /* ให้สูงเท่าคอลัมน์ */
+}
+
+/* เส้นขั้นไม่กินพื้นที่ และ “กึ่งกลางจริง ๆ” ของแถว */
+.action-button + .action-button::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%); /* กึ่งกลางจริงของ cell */
+  width: 1px;
+  height: 68%;                      /* ยาวเท่าไหร่ปรับได้ (เช่น 60–80%) */
+  background: rgba(31,41,55,.6);
+}
+
+/* ไม่มีวงกลม และจัดระยะระหว่างตัวเลขกับป้ายชื่อ */
+.action-icon{
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  margin-bottom: .25rem;
+  display: block !important;
+  text-align: center;
+}
+.action-label{
+  font-weight: 600;
+  text-align: center;
+}
+/* วงกลมของ Transaction */
+.transaction-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #e5e7eb;   /* เทาอ่อน */
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+.tx-icon {
+  width: 18px;
+  height: 18px;
+  color: #374151;        /* เทาเข้ม */
+}
+
+/* วงกลมของการ์ดบัญชี */
+.category-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: #d1fae5;   /* เขียวอ่อน */
+  display: grid;
+  place-items: center;
+  margin-bottom: 10px;
+}
+
+.cat-icon {
+  width: 24px;
+  height: 24px;
+  color: #0f172a;        /* น้ำเงินเทาเข้ม */
+}
+/* ทำให้การ์ดวางปุ่ม ⋮ ได้ */
+.category-card.has-more { position: relative; }
+
+/* ปุ่ม ⋮ */
+.more-btn{
+  position:absolute;
+  top:10px; right:10px;
+  width:32px; height:32px;
+  border-radius:999px;
+  border:none;
+  background: transparent;
+  color:#0f172a;
+  display:grid; place-items:center;
+  cursor:pointer;
+  opacity:.7;
+}
+.more-btn:hover{ background: rgba(0,0,0,.06); opacity:1 }
+
+/* เมนูป๊อปโอเวอร์ */
+.more-menu{
+  position:absolute;
+  top:44px; right:10px;
+  min-width:130px;
+  background:#ffffff;
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:14px;
+  box-shadow: 0 10px 24px rgba(17,24,39,.14);
+  padding:6px;
+  z-index: 50;
+}
+.more-item{
+  width:100%;
+  display:flex; align-items:center; gap:8px;
+  padding:10px 12px;
+  background:none; border:0; border-radius:10px;
+  color:#0f172a; cursor:pointer; text-align:left;
+  font-size:.95rem;
+}
+.more-item:hover{ background:#f3f4f6 }
+.more-item.danger{ color:#ef4444 }
+.more-item.danger:hover{ background:#fee2e2 }
+
+/* เดือน/ปีใต้กล่องสีเขียวอ่อน */
+.month-year-nav{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:16px;
+  margin:10px 0 6px;   /* ชิดใต้ balance-display */
+  font-weight:700;
+  font-size:18px;
+}
+.month-year-nav button{
+  background:none;
+  border:none;
+  font-size:20px;
+  cursor:pointer;
+  line-height:1;
+}
+

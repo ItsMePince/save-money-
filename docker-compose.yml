@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend-container
+    ports:
+      - "8081:8081"
+    networks: [mynet]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-container
+    ports:
+      - "3000:80"
+    depends_on: [backend]
+    networks: [mynet]
+
+networks:
+  mynet:
+    driver: bridge

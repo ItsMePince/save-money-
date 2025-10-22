@@ -1,0 +1,34 @@
+.bottom-nav {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  display: flex;
+  gap: 24px;
+  padding: 12px 24px;
+  border-radius: 40px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+}
+
+.nav-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  outline: none;
+  background: #c4e7e0; /* วงกลมสีเขียวอ่อน */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.nav-button:hover {
+  background: #aee0d5; /* hover */
+}
+
+.nav-button svg {
+  color: #111827; /* สีไอคอน */
+}

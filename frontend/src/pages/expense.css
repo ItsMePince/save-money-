@@ -1,0 +1,296 @@
+:root {
+  --container: 430px;
+
+  /* fluid type (ยังใช้ได้ในกรอบมือถือ) */
+  --fs-12: clamp(.72rem, .68rem + .2vw, .8rem);
+  --fs-14: clamp(.84rem, .8rem + .2vw, .95rem);
+  --fs-16: clamp(.96rem, .9rem + .3vw, 1.05rem);
+  --fs-18: clamp(1.06rem, 1rem + .35vw, 1.15rem);
+  --fs-24: clamp(1.2rem, 1.05rem + .8vw, 1.45rem);
+  --fs-30: clamp(1.45rem, 1.1rem + 1.3vw, 2.1rem);
+  --safe-bottom: 0px;
+
+  /* สีหลัก */
+  --bg: #f2fbf8;
+  --bg-elev: #ffffff;
+  --ink: #0b1b17;            /* ดำหลัก */
+  --sub: #5d6a66;
+  --mint: #cfeee6;
+  --mint-2: #e9fbf5;
+  --mint-deep: #a9e0d2;
+  --accent: #dff8f1;
+  --accent-2: #e8fff7;
+  --danger-bg: #ffc9c9;
+  --ok-bg: #E9FFBF;
+  --ring: #b7e7db;
+  --shadow: 0 1px 0 rgba(10, 30, 22, 0.05), 0 8px 24px rgba(10, 30, 22, 0.06);
+
+  --brand-red: #ef4444;      /* ปรับได้ */
+}
+
+html, body, #root, .App {
+  width: 100%;
+  max-width: var(--container) !important;
+  margin-inline: auto !important;
+  overflow-x: hidden;
+}
+
+.calc-wrap {
+  padding: 20px 18px calc(84px + var(--safe-bottom));
+  color: var(--ink);
+  font-size: var(--fs-16);
+  background: var(--bg);
+}
+
+/* ===== Topbar ===== */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 53px;
+  background: #3bd1a7;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.name { font-weight: 600; }
+
+/* ===== Type pill ===== */
+.type-pill { display: flex; justify-content: center; margin: 8px 0 6px; }
+.pill{
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #d7efe7; border: none; border-radius: 53px;
+  padding: 14px 18px; font-weight: 600; cursor: pointer; box-shadow: var(--shadow);
+}
+.pill .icon{ width: 18px; height: 18px; }
+
+/* ===== Category Row ===== */
+.category-row{
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 4px; margin-top: 8px; margin-bottom: 10px;
+}
+.cat{
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 6px; border-radius: 53px; border: none; background: transparent;
+  cursor: pointer;
+  color: var(--ink);                 /* ไอคอนเริ่มต้นสีดำ */
+}
+.cat span{ color: var(--ink); }      /* ข้อความใต้ไอคอนเป็นดำเสมอ */
+
+/* ทำให้เฉพาะไอคอนในปุ่มหมวด ใช้ currentColor */
+.cat .icon{ width: 22px; height: 22px; }
+.cat .icon path,
+.cat .icon circle,
+.cat .icon rect,
+.cat .icon line,
+.cat .icon polyline,
+.cat .icon polygon{
+  stroke: currentColor;
+}
+.cat .icon path,
+.cat .icon circle,
+.cat .icon rect,
+.cat .icon polygon{
+  fill: currentColor;
+}
+
+/* เมื่อ active: ไอคอนเป็นสีแดง แต่ข้อความยังดำ */
+.cat.active .icon{ color: var(--brand-red); }
+
+/* ===== Amount ===== */
+.amount{ text-align: center; margin: 14px 0 8px; }
+.amount .num{
+  font-size: clamp(2.2rem, 1.6rem + 2.6vw, 3.2rem);
+  font-weight: 700; letter-spacing: .5px;
+}
+.amount .currency{ font-size: var(--fs-30); margin-left: 6px; }
+
+/* ===== Segments ===== */
+.segments{
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin: 12px 0;
+}
+.seg{
+  width: 100%; padding: 12px 14px; border-radius: 53px; border: none;
+  background: var(--mint); color: var(--ink); font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+/* ===== Inputs ===== */
+.inputs{
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-bottom: 8px;
+}
+.input{
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: 53px;
+  background: #fff;                     /* พื้นขาว */
+  border: 2px solid #C4E7E0;            /* กรอบมินต์ตามที่ต้องการ */
+  box-shadow: none;                     /* ตัดเงาออกให้คลีน */
+  transition: border-color .18s, box-shadow .18s;
+}
+.input .icon{ width: 18px; height: 18px; color: #0b1b17; opacity: .9; }
+.input input{
+  border: 0; outline: 0; width: 100%; background: transparent;
+  font-size: var(--fs-16); color: var(--ink);
+}
+
+/* ===== Keypad ===== */
+.keypad{
+  margin-top: 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.key{
+  height: 48px; border-radius: 53px; border: 0; cursor: pointer;
+  background: #C4E7E0; box-shadow: var(--shadow);
+  font-size: var(--fs-18); font-weight: 600;
+}
+.key.danger{ background: var(--danger-bg); }
+.key .icon{ width: 20px; height: 20px; }
+
+/* ===== Confirm button ===== */
+.confirm {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ok-btn {
+  grid-column: 2; /* ให้อยู่คอลัมน์กลาง */
+  width: 100%;
+  height: 48px;
+  border-radius: 53px;
+  border: 0;
+  cursor: pointer;
+  background: var(--ok-bg);
+  box-shadow: var(--shadow);
+  display: grid;
+  place-items: center;
+}
+.ok-btn .icon{ width: 22px; height: 22px; }
+
+/* ให้ไอคอนในปุ่มล่างเป็นสีดำคงที่ */
+.nav-icon svg{ color: var(--ink); }
+
+/* ===== Utilities ===== */
+.icon{ width: 1em; height: 1em; display: inline-block; }
+:root {
+  --nav-bg: var(--bg-elev);
+  --nav-border: rgba(0,0,0,.06);
+  --nav-icon: #374151;        /* สีไอคอน/ตัวอักษร */
+  --nav-chip: #ccfbf1;        /* พื้นหลังไอคอนวงกลม ถ้าใช้ */
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1rem;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 999px;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,.12);
+  padding: .5rem;
+  z-index: 30;
+  display: flex;
+  gap: .25rem;
+}
+
+.bottom-nav .nav-button {
+  background: none;
+  border: 0;
+  color: var(--nav-icon);     /* ✅ กำหนดสีไอคอนที่นี่ */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.8rem;
+  padding: .5rem 0;
+  cursor: pointer;
+  transition: transform .18s ease;
+}
+
+.bottom-nav .nav-button:hover { transform: translateY(-2px); }
+
+.bottom-nav .nav-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--nav-chip);
+  display: grid;
+  place-items: center;
+}
+.amount {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;   /* อยู่กลางเหมือนเดิม */
+  gap: 4px;                  /* ระยะระหว่างเลขกับ ฿ ให้ชิดขึ้น */
+}
+
+.amount-input {
+  font: inherit;
+  font-weight: 800;
+  font-size: clamp(40px, 8vw, 64px);
+  line-height: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  text-align: right;         /* เลขชิดขวาในช่อง */
+  color: var(--ink, #0a0a0a);
+
+  /* 🔻 สำคัญ: เอาความกว้างคงที่ออก */
+  width: auto;
+  min-width: 0;
+  padding: 0;                /* ไม่ให้ padding ดัน ฿ ออกไป */
+}
+
+.amount-input::selection { background: #2e7bff33; }
+
+.amount .currency {
+  font-weight: 800;
+  font-size: clamp(28px, 5vw, 40px);
+  /* ถ้ายังอยากชิดอีก ใส่ margin-left เล็กน้อยได้ */
+  /* margin-left: 2px; */
+}
+/* กล่องจำนวนเงินให้อยู่กึ่งกลางทั้งบล็อก */
+.amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;   /* ศูนย์กลางในแนวนอน */
+  width: 100%;               /* เต็มแถวเพื่อจัดกลางได้จริง */
+  gap: 6px;                  /* ระยะระหว่างเลขกับ ฿ */
+  margin: 6px 0 12px;        /* เผื่อระยะบนล่างเล็กน้อย */
+}
+
+/* input ให้กว้างเท่าข้อความ และจัดข้อความกลาง */
+.amount-input {
+  font: inherit;
+  font-weight: 800;
+  font-size: clamp(40px, 8vw, 64px);
+  line-height: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+
+  width: auto;               /* กว้างตามเนื้อหา */
+  min-width: 0;
+  padding: 0;
+
+  text-align: center;        /* พิมพ์ตรงกลาง */
+  color: var(--ink, #0a0a0a);
+}
+.amount-input::selection { background: #2e7bff33; }
+
+/* ฿ ให้ขนาดสัมพันธ์ และชิดใกล้ตัวเลข */
+.amount .currency {
+  font-weight: 800;
+  font-size: clamp(28px, 5vw, 40px);
+  line-height: 1;
+}

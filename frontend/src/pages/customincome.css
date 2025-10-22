@@ -1,0 +1,201 @@
+:root{
+  --border:#e5e7eb;
+  --muted:#9ca3af;
+  --text:#111827;
+  --bg:#ffffff;
+  --pill:#d1fae5;
+  --accent:#10b981;
+}
+
+.cc-wrap{
+  max-width:520px;
+  margin:0 auto;
+  padding:16px 16px 96px;
+  min-height:100dvh;
+  box-sizing:border-box;
+  background:var(--bg);
+  color:var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+/* Header */
+.cc-header{ margin-bottom:12px; }
+.cc-topbar{ display:flex; align-items:center; gap:12px; }
+.cc-avatar{
+  width:36px; height:36px; border-radius:999px;
+  display:grid; place-items:center;
+  background:#10b981; color:#fff; font-weight:700;
+}
+.cc-owner{ font-weight:600; }
+.cc-title{
+  text-align:left; font-size:1.5rem; margin:20px 0 10px; font-weight:800;
+}
+
+/* Creator */
+.cc-creator{
+  display:grid;
+  grid-template-columns: 64px 1fr 64px;
+  align-items:center;
+  gap:12px;
+  margin-bottom:16px;
+}
+.cc-picked{
+  height:64px; width:64px; border-radius:999px;
+  display:grid; place-items:center;
+  background:var(--pill);
+}
+.cc-picked-icon{ width:28px; height:28px; }
+.cc-namefield{
+  height:64px; border-radius:999px; background:rgba(16,185,129,.15);
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.cc-nameinput{
+  width:80%; text-align:center; font-size:1rem; border:none; outline:none; background:transparent;
+}
+.cc-underline{
+  position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+  width:60%; height:1.5px; background:rgba(0,0,0,.25);
+}
+.cc-confirm{
+  height:64px; width:64px; border-radius:999px; border:none; cursor:pointer;
+  background:#eaffc7; display:grid; place-items:center;
+}
+.cc-checkicon{ width:22px; height:22px; }
+
+/* Library */
+.cc-library{ margin-top:10px; }
+.cc-group{ margin:18px 0 8px; }
+.cc-group-title{ font-size:1.05rem; margin:6px 0 10px; }
+.cc-grid{ display:flex; flex-wrap:wrap; gap:12px; }
+.cc-chip{
+  width:56px; height:56px; border-radius:999px; border:none; cursor:pointer;
+  background:var(--pill); display:grid; place-items:center;
+  transition: transform .08s ease, outline .12s ease, box-shadow .12s ease;
+}
+.cc-chip.active{
+  outline:2.5px solid var(--accent);
+  box-shadow:0 0 0 4px rgba(16,185,129,.15);
+  transform:scale(1.03);
+}
+.cc-icon{ width:22px; height:22px; }
+
+/* ...ของเดิมคงไว้... */
+
+/* Search bar */
+.cc-search{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:8px 0 14px;
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:10px 12px;
+  background:#fff;
+}
+.cc-search-icon{ width:18px; height:18px; color:var(--muted); }
+.cc-search-input{
+  flex:1;
+  border:none; outline:none; background:transparent;
+  font-size:1rem;
+}
+.cc-search-clear{
+  border:none; background:#f3f4f6;
+  width:28px; height:28px; border-radius:999px;
+  cursor:pointer; font-size:18px; line-height:1;
+}
+
+/* No result */
+.cc-noresult{
+  color:var(--muted);
+  font-size:.95rem;
+  padding:8px 4px 16px;
+}
+
+/* ระยะห่างรวม */
+.cc-wrap { padding: 20px 20px 120px; }
+
+/* Header ให้ห่างจากส่วนสร้างหมวด */
+.cc-title { margin: 28px 0 22px; }
+
+/* แถวสร้างหมวด (ไอคอนที่เลือก + ชื่อ + ติ๊กถูก) */
+.cc-creator { gap: 16px; margin-bottom: 22px; }
+
+/* แถบค้นหา ให้มีที่หายใจมากขึ้น */
+.cc-search { margin: 14px 0 22px; padding: 12px 14px; }
+
+/* ระยะก่อน/หลังแต่ละหมวด */
+.cc-group { margin: 26px 0 14px; }
+.cc-group-title { margin: 0 0 14px; }
+
+/* เว้นวรรคระหว่างไอคอนในหมวดให้กว้างขึ้น */
+.cc-grid { gap: 16px 18px; }  /* row-gap 16, column-gap 18 */
+
+/* ปุ่มไอคอนให้ดูมีพื้นที่มากขึ้นนิดนึง */
+.cc-chip { width: 60px; height: 60px; }
+.cc-icon { width: 24px; height: 24px; }
+
+/* ยืดระยะเพิ่มสำหรับจอใหญ่ */
+@media (min-width: 480px) {
+  .cc-grid { gap: 18px 20px; }
+  .cc-group { margin: 30px 0 16px; }
+}
+
+/* ระยะห่างหลังหัวข้อ CategoryCustom */
+.cc-title {
+  margin: 32px 0 32px; /* เดิม 28px 0 22px → เว้นล่างมากขึ้น */
+}
+
+/* เว้นห่างกล่องกรอกชื่อหมวดกับ Search */
+.cc-creator {
+  margin-bottom: 50px; /* เดิม 22px → เว้นเยอะขึ้น */
+}
+
+/* เว้นระยะ Search bar กับ list icon */
+.cc-search {
+  margin-bottom: 32px; /* เดิม 22px → มากขึ้น */
+}
+:root {
+  --nav-bg: var(--bg-elev);
+  --nav-border: rgba(0,0,0,.06);
+  --nav-icon: #374151;        /* สีไอคอน/ตัวอักษร */
+  --nav-chip: #ccfbf1;        /* พื้นหลังไอคอนวงกลม ถ้าใช้ */
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1rem;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 999px;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,.12);
+  padding: .5rem;
+  z-index: 30;
+  display: flex;
+  gap: .25rem;
+}
+
+.bottom-nav .nav-button {
+  background: none;
+  border: 0;
+  color: var(--nav-icon);     /* ✅ กำหนดสีไอคอนที่นี่ */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.8rem;
+  padding: .5rem 0;
+  cursor: pointer;
+  transition: transform .18s ease;
+}
+
+.bottom-nav .nav-button:hover { transform: translateY(-2px); }
+
+.bottom-nav .nav-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--nav-chip);
+  display: grid;
+  place-items: center;
+}
