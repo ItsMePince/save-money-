@@ -96,3 +96,28 @@
   width:100%; border:none; padding:14px 20px; border-radius:12px;
   background:var(--brand); color:var(--brand-text); font-weight:700; cursor:pointer;
 }
+/* accountnew.css */
+.accnew-wrap, .form, .row { overflow: visible; }
+
+.dropdown {
+    background: #fff;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.08);
+    padding: 6px;
+    max-height: 240px;
+    overflow: auto;
+    z-index: 100;
+}
+
+.dropdown .opt {
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+}
+.dropdown .opt:hover { background: #f3f4f6; }
+.dropdown .opt.active { background: #e5f2ff; }
