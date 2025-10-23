@@ -27,6 +27,9 @@ import AccountNew from "./pages/accountnew";
 import CustomIncome from "./pages/customincome";
 import CustomOutcome from "./pages/customoutcome";
 
+// เพิ่ม: Recurring Transactions
+import RepeatedTransactions from "./pages/RepeatedTransactions";
+
 function NotFound() {
   return (
     <div style={{ padding: 16 }}>
@@ -190,8 +193,8 @@ export default function App() {
           }
         />
 
-        <Route 
-          path="/summary" 
+        <Route
+          path="/summary"
 
           element={
             <ProtectedRoute>
@@ -253,6 +256,17 @@ export default function App() {
                   </ProtectedRoute>
               }
           />
+
+        {/* เพิ่ม: Recurring Transactions Route */}
+        <Route
+          path="/recurring"
+          element={
+            <ProtectedRoute>
+              <RepeatedTransactions />
+            </ProtectedRoute>
+          }
+        />
+
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>

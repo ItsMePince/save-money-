@@ -1,0 +1,175 @@
+.repeated-transactions {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 24px;
+}
+
+.repeated-transactions .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  max-width: 448px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.repeated-transactions h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.repeated-transactions .add-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #5eead4;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.repeated-transactions .add-btn:hover {
+  background: #2dd4bf;
+  transform: scale(1.05);
+}
+
+.repeated-transactions .plus-icon {
+  font-size: 24px;
+  color: #374151;
+  font-weight: 300;
+}
+
+.repeated-transactions .transactions-list {
+  max-width: 448px;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.repeated-transactions .transaction-card {
+  background: #cfeee7;
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform 0.2s;
+  font-size: 18px;
+
+}
+
+.repeated-transactions .transaction-card:hover {
+  transform: translateY(-2px);
+}
+
+.repeated-transactions .transaction-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.repeated-transactions .transaction-info h3 {
+  font-size: 17px;
+  font-weight: 500;
+  color: #111827;
+  margin: 0;
+}
+
+.repeated-transactions .transaction-info .date {
+  font-size: 10px;
+  color: #9ca3af;
+  margin: 4px 0 0 0;
+}
+
+.repeated-transactions .transaction-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.repeated-transactions .amount {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.repeated-transactions .menu-container {
+  position: relative;
+
+}
+
+.repeated-transactions .menu-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.6);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.repeated-transactions .menu-btn:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+  transform: scale(1.05);
+}
+
+.repeated-transactions .menu-btn svg {
+  color: #374151;
+}
+
+.repeated-transactions .dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 10;
+  min-width: 140px;
+}
+
+.repeated-transactions .menu-item {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #374151;
+  transition: background-color 0.2s;
+  text-align: left;
+}
+
+.repeated-transactions .menu-item:hover {
+  background-color: #f3f4f6;
+}
+
+.repeated-transactions .menu-item.edit svg {
+  color: #3b82f6;
+}
+
+.repeated-transactions .menu-item.delete {
+  color: #dc2626;
+}
+
+.repeated-transactions .menu-item.delete svg {
+  color: #dc2626;
+}
+
+.repeated-transactions .menu-item.delete:hover {
+  background-color: #fef2f2;
+}
