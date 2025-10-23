@@ -1,0 +1,138 @@
+.add-transaction {
+  min-height: 100vh;
+  background-color: #f9fafb;
+  padding: 24px;
+}
+
+.add-transaction .form-container {
+  max-width: 448px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+}
+
+.add-transaction h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  text-align: center;
+  margin: 0 0 32px 0;
+}
+
+.add-transaction .form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.add-transaction .form-field {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 16px;
+}
+
+.add-transaction .form-field:last-of-type {
+  border-bottom: none;
+}
+
+.add-transaction .form-field label {
+  display: block;
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.add-transaction .form-field input,
+.add-transaction .form-field select {
+  width: 100%;
+  text-align: right;
+  color: #9ca3af;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  background-color: transparent;
+}
+
+.add-transaction .form-field input:focus,
+.add-transaction .form-field select:focus {
+  color: #111827;
+}
+
+.add-transaction .form-field input[type="number"]::-webkit-inner-spin-button,
+.add-transaction .form-field input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.add-transaction .form-field input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.add-transaction .date-input-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.add-transaction .calendar-icon {
+  color: #111827;
+  flex-shrink: 0;
+}
+
+.add-transaction .form-field input[type="date"] {
+  color: #111827;
+  cursor: pointer;
+}
+
+.add-transaction .form-field input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.add-transaction .form-field select {
+  cursor: pointer;
+  color: #111827;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+  padding-right: 20px;
+}
+
+.add-transaction .form-actions {
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.add-transaction .cancel-btn,
+.add-transaction .submit-btn {
+  flex: 1;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-transaction .cancel-btn {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.add-transaction .cancel-btn:hover {
+  background-color: #d1d5db;
+}
+
+.add-transaction .submit-btn {
+  background-color: #d9f99d;
+  color: #111827;
+}
+
+.add-transaction .submit-btn:hover {
+  background-color: #bef264;
+  transform: translateY(-1px);
+}
