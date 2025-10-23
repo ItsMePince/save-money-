@@ -10,6 +10,7 @@ import "./summary.css";
 import BottomNav from "./buttomnav";
 import "./buttomnav.css";
 import { useNavigate } from "react-router-dom";
+import { saveExpensesToCache } from "../lib/offlineStore";
 
 type ExpenseDTO = {
     id: number;
@@ -290,6 +291,7 @@ export default function Summary() {
             if (!res.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (${res.status})`);
             const data: ExpenseDTO[] = await res.json();
             setEntries(toDayEntries(data));
+            await saveExpensesToCache(data);
         } catch (e: any) {
             setError(e?.message || "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
         } finally {
@@ -344,6 +346,7 @@ export default function Summary() {
             if (!ok) throw new Error("ลบไม่สำเร็จ");
             removeFromState(it.id);
             setSelected(null);
+            await loadExpenses();
         } catch (e: any) {
             alert(e?.message || "เกิดข้อผิดพลาดขณะลบ");
         } finally {
