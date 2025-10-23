@@ -4,13 +4,12 @@ import {
     Utensils, X,
     Train, Wallet, CreditCard, Car, Bus, Bike,
     Coffee, Gift, Tag, ShoppingBag, ShoppingCart,
-    Home, HeartPulse, Activity, Fuel, MapPin
+    Home as HomeIcon, HeartPulse, Activity, Fuel, MapPin
 } from "lucide-react";
 import "./summary.css";
 import BottomNav from "./buttomnav";
 import "./buttomnav.css";
 import { useNavigate } from "react-router-dom";
-import { saveExpensesToCache } from "../lib/offlineStore";
 
 type ExpenseDTO = {
     id: number;
@@ -19,7 +18,7 @@ type ExpenseDTO = {
     amount: number;
     note?: string | null;
     place?: string | null;
-    date: string;
+    date: string;              // YYYY-MM-DD (หลังจากเรา normalize)
     occurredAt?: string | null;
     paymentMethod?: string | null;
     iconKey?: string | null;
@@ -34,20 +33,20 @@ type Item = {
     iconKey?: string;
     title: string;
     tag: string;
-    amount: number;
-    date?: string;
-    isoDate: string;
+    amount: number;            // เซ็นต์แล้ว (+/-)
+    date?: string;             // dd/MM/yyyy (เพื่อแสดง)
+    isoDate: string;           // YYYY-MM-DD
     note?: string;
     account?: string;
     location?: string;
     type: "EXPENSE" | "INCOME";
-    datetimeLocal?: string;
+    datetimeLocal?: string;    // YYYY-MM-DDTHH:mm (ไว้โชว์เวลา)
 };
 
 type DayEntry = {
-    isoKey: string;
-    label: string;
-    total: number;
+    isoKey: string;            // YYYY-MM-DD
+    label: string;             // e.g. "พฤ. 10/10"
+    total: number;             // รวมทั้งวัน (signed)
     items: Item[];
 };
 
@@ -56,9 +55,10 @@ const API_BASE =
     (import.meta as any)?.env?.REACT_APP_API_BASE ||
     "http://localhost:8081";
 
+/* ---------------- Icons ---------------- */
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     Utensils, Train, Wallet, CreditCard, Car, Bus, Bike, Coffee, Gift, Tag,
-    ShoppingBag, ShoppingCart, Home, HeartPulse, Activity, Fuel, MapPin
+    ShoppingBag, ShoppingCart, Home: HomeIcon, HeartPulse, Activity, Fuel, MapPin
 };
 
 const EN_ALIAS: Record<string, string> = {
@@ -144,32 +144,67 @@ function IconByKey({
     return <Icon size={size} />;
 }
 
+/* ---------------- Date helpers (รองรับหลายรูปแบบ) ---------------- */
 function pad2(n: number) { return n.toString().padStart(2, "0"); }
-function parseIsoDateToLocal(iso: string) {
-    const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10));
+
+function toISODate(anyDate: string): string {
+    if (!anyDate) return new Date().toISOString().slice(0, 10);
+
+    const s = anyDate.trim();
+
+    // already ISO YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+    // YYYY/MM/DD → YYYY-MM-DD
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) {
+        const [y, m, d] = s.split("/");
+        return `${y}-${m}-${d}`;
+    }
+
+    // DD/MM/YYYY → YYYY-MM-DD
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+        const [d, m, y] = s.split("/");
+        return `${y}-${m}-${d}`;
+    }
+
+    // DD-MM-YYYY → YYYY-MM-DD
+    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+        const [d, m, y] = s.split("-");
+        return `${y}-${m}-${d}`;
+    }
+
+    // fallback
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
+
+    return new Date().toISOString().slice(0, 10);
+}
+
+function parseIsoDateToLocal(isoOrAny: string) {
+    const iso = toISODate(isoOrAny);
+    const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
     return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
+
 function thaiWeekdayAbbr(d: Date) {
     const map = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
     return map[d.getDay()];
 }
+
 function dayLabel(d: Date) {
     return `${thaiWeekdayAbbr(d)} ${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
 }
+
 function ddmmyyyy(d: Date) {
     return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
+
 function signedAmountText(n: number) {
     if (n > 0) return `+${n.toLocaleString()}`;
     if (n < 0) return `-${Math.abs(n).toLocaleString()}`;
     return "0";
 }
-function splitLocalDatetime(local?: string): { date?: string; time?: string } {
-    if (!local || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return {};
-    const [d, t] = local.split("T");
-    const [y, m, dd] = d.split("-");
-    return { date: `${dd}/${m}/${y}`, time: t };
-}
+
 function isoToLocalDatetime(iso?: string | null): string | undefined {
     if (!iso) return undefined;
     const d = new Date(iso);
@@ -195,6 +230,7 @@ function extractLocalDatetime(e: ExpenseDTO): string | undefined {
         null;
     const fromIso = isoToLocalDatetime(iso);
     if (fromIso) return fromIso;
+
     const timeField =
         (e as any).time ??
         (e as any).occurredTime ??
@@ -208,13 +244,18 @@ function extractLocalDatetime(e: ExpenseDTO): string | undefined {
     return undefined;
 }
 
+/* ---------------- Transform ---------------- */
 function toDayEntries(list: ExpenseDTO[]): DayEntry[] {
     const groups = new Map<string, Item[]>();
+
     for (const e of list) {
         const sign = e.type === "EXPENSE" ? -1 : 1;
         const signed = sign * Math.abs(Number(e.amount));
-        const d = parseIsoDateToLocal(e.date);
-        const isoKey = e.date;
+
+        // ใช้วันที่แบบ ISO เสมอ (normalize ก่อน)
+        const isoDate = toISODate(e.date);
+        const d = parseIsoDateToLocal(isoDate);
+
         const item: Item = {
             id: e.id,
             category: e.category,
@@ -222,28 +263,66 @@ function toDayEntries(list: ExpenseDTO[]): DayEntry[] {
             iconKey: e.iconKey || undefined,
             title: e.category,
             tag: e.paymentMethod ? e.paymentMethod : "",
-            amount: signed,
+            amount: isFinite(signed) ? signed : 0,
             date: ddmmyyyy(d),
-            isoDate: e.date,
+            isoDate,
             note: e.note || undefined,
             account: e.paymentMethod || undefined,
             location: e.place || undefined,
             type: e.type,
-            datetimeLocal: extractLocalDatetime(e)
+            datetimeLocal: extractLocalDatetime({ ...e, date: isoDate })
         };
-        if (!groups.has(isoKey)) groups.set(isoKey, []);
-        groups.get(isoKey)!.push(item);
+
+        if (!groups.has(isoDate)) groups.set(isoDate, []);
+        groups.get(isoDate)!.push(item);
     }
+
     const entries: DayEntry[] = Array.from(groups.entries()).map(([key, items]) => {
         const [y, m, d] = key.split("-").map(Number);
         const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
         const total = items.reduce((s, it) => s + it.amount, 0);
         return { isoKey: key, label: dayLabel(dt), total, items };
     });
+
+    // เรียงจากวันใหม่ไปเก่า
     entries.sort((a, b) => (a.isoKey < b.isoKey ? 1 : -1));
     return entries;
 }
 
+/* ---------- ดึง recurring จาก localStorage แล้ว map เป็น ExpenseDTO ---------- */
+function loadLocalRepeatedAsExpenses(): ExpenseDTO[] {
+    try {
+        const raw = localStorage.getItem("repeatedTransactions");
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+
+        // โครงสร้าง recurring: { id, name, date, amount }
+        return arr
+            .filter((x: any) => x && typeof x === "object")
+            .map((x: any) => {
+                const amt = Number(x.amount || 0);
+                const iso = toISODate(String(x.date || "")); // normalize
+
+                return {
+                    id: Number(x.id) || Date.now(),
+                    type: "EXPENSE",                                   // recurring ถือเป็นค่าใช้จ่าย
+                    category: String(x.name || "รายการ"),
+                    amount: Math.abs(isFinite(amt) ? amt : 0),
+                    note: null,
+                    place: null,
+                    date: iso,                                         // ใช้ ISO เสมอ
+                    occurredAt: null,
+                    paymentMethod: undefined,
+                    iconKey: undefined
+                } as ExpenseDTO;
+            });
+    } catch {
+        return [];
+    }
+}
+
+/* ---------------- Component ---------------- */
 type EditForm = {
     typeLabel: "ค่าใช้จ่าย" | "รายได้";
     category: string;
@@ -289,9 +368,12 @@ export default function Summary() {
                 credentials: "include",
             });
             if (!res.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (${res.status})`);
-            const data: ExpenseDTO[] = await res.json();
-            setEntries(toDayEntries(data));
-            await saveExpensesToCache(data);
+            const serverData: ExpenseDTO[] = await res.json();
+
+            const localRepeated = loadLocalRepeatedAsExpenses();
+            const all = [...serverData, ...localRepeated];
+
+            setEntries(toDayEntries(all));
         } catch (e: any) {
             setError(e?.message || "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
         } finally {
@@ -301,6 +383,20 @@ export default function Summary() {
 
     useEffect(() => { loadExpenses(); }, []);
 
+    // ฟังเหตุการณ์เพื่อรีโหลดอัตโนมัติ (บันทึก recurring / อัปเดตบัญชี / แท็บอื่น)
+    useEffect(() => {
+        const reload = () => loadExpenses();
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === "repeatedTransactions" || e.key === "accounts") reload();
+        };
+        window.addEventListener("accountsUpdated", reload);
+        window.addEventListener("storage", onStorage);
+        return () => {
+            window.removeEventListener("accountsUpdated", reload);
+            window.removeEventListener("storage", onStorage);
+        };
+    }, []);
+
     const onEdit = (it: Item) => {
         setForm(itemToForm(it));
         setEditMode(true);
@@ -308,22 +404,8 @@ export default function Summary() {
         const f = itemToForm(it);
         const route = f.typeLabel === "รายได้" ? "/income-edit" : "/expense-edit";
         navigate(route, {
-            state: {
-                mode: "edit",
-                data: { ...f, id: it.id }
-            },
+            state: { mode: "edit", data: { ...f, id: it.id } },
         });
-    };
-
-    const removeFromState = (id: number) => {
-        setEntries((prev) =>
-            prev
-                .map((d) => {
-                    const items = d.items.filter((x) => x.id !== id);
-                    return { ...d, items, total: items.reduce((s, it) => s + it.amount, 0) };
-                })
-                .filter((d) => d.items.length > 0)
-        );
     };
 
     const tryDeleteEndpoints = async (id: number) => {
@@ -344,9 +426,8 @@ export default function Summary() {
             setSaving(true);
             const ok = await tryDeleteEndpoints(it.id);
             if (!ok) throw new Error("ลบไม่สำเร็จ");
-            removeFromState(it.id);
-            setSelected(null);
             await loadExpenses();
+            setSelected(null);
         } catch (e: any) {
             alert(e?.message || "เกิดข้อผิดพลาดขณะลบ");
         } finally {
@@ -354,71 +435,23 @@ export default function Summary() {
         }
     };
 
-    const submitEdit = async () => {
-        if (!selected || !form) return;
-        const apiType: "EXPENSE" | "INCOME" = form.typeLabel === "รายได้" ? "INCOME" : "EXPENSE";
-        const payload = {
-            id: selected.id,
-            type: apiType,
-            category: form.category,
-            amount: Number(form.amount),
-            note: form.note,
-            place: form.place,
-            date: form.date,
-            paymentMethod: form.paymentMethod || "",
-            iconKey: form.iconKey || "Utensils",
-        };
-        try {
-            setSaving(true);
-            let res = await fetch(`${API_BASE}/api/expenses/${selected.id}`, {
-                method: "PUT",
-                credentials: "include",
-                headers: { "Content-Type": "application/json", Accept: "application/json" },
-                body: JSON.stringify(payload),
-            });
-            if (!res.ok) {
-                const createRes = await fetch(`${API_BASE}/api/expenses`, {
-                    method: "POST",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json", Accept: "application/json" },
-                    body: JSON.stringify(payload),
-                });
-                if (!createRes.ok) {
-                    const txt = await createRes.text();
-                    throw new Error(`บันทึกรายการใหม่ไม่สำเร็จ (${createRes.status}) ${txt}`);
-                }
-                const delRes = await fetch(`${API_BASE}/api/expenses/${selected.id}`, {
-                    method: "DELETE",
-                    credentials: "include",
-                    headers: { Accept: "application/json" }
-                });
-                if (!delRes.ok) {
-                    const txt = await delRes.text();
-                    throw new Error(`ลบรายการเดิมไม่สำเร็จ (${delRes.status}) ${txt}`);
-                }
-            }
-            setEditMode(false);
-            setSelected(null);
-            await loadExpenses();
-        } catch (e: any) {
-            alert(e?.message || "เกิดข้อผิดพลาดขณะบันทึก");
-        } finally {
-            setSaving(false);
-        }
-    };
+    if (loading) {
+        return (
+            <div className="App summary-page">
+                <div className="list-wrap"><div className="day-card">กำลังโหลดข้อมูล…</div></div>
+                <BottomNav />
+            </div>
+        );
+    }
 
-    if (loading) return (
-        <div className="App summary-page">
-            <div className="list-wrap"><div className="day-card">กำลังโหลดข้อมูล…</div></div>
-            <BottomNav/>
-        </div>
-    );
-    if (error) return (
-        <div className="App summary-page">
-            <div className="list-wrap"><div className="day-card neg">{error}</div></div>
-            <BottomNav/>
-        </div>
-    );
+    if (error) {
+        return (
+            <div className="App summary-page">
+                <div className="list-wrap"><div className="day-card neg">{error}</div></div>
+                <BottomNav />
+            </div>
+        );
+    }
 
     return (
         <div className="App summary-page">
@@ -514,9 +547,7 @@ export default function Summary() {
                                 </div>
                                 <div className="kv">
                                     <span className="k">เวลา</span>
-                                    <span className="v">
-                    {splitLocalDatetime(selected.datetimeLocal).time || "-"}
-                  </span>
+                                    <span className="v">{(selected.datetimeLocal?.split("T")[1]) || "-"}</span>
                                 </div>
                                 <div className="kv">
                                     <span className="k">ประเภทการชำระ</span>
@@ -533,7 +564,9 @@ export default function Summary() {
 
                                 <div className="actions-row two" style={{ marginTop: 12 }}>
                                     <button className="btn primary" onClick={() => onEdit(selected)}>แก้ไข</button>
-                                    <button className="btn danger" onClick={() => onDelete(selected)}>ลบ</button>
+                                    <button className="btn danger" onClick={() => onDelete(selected)} disabled={saving}>
+                                        {saving ? "กำลังลบ..." : "ลบ"}
+                                    </button>
                                 </div>
                             </div>
                         )}
