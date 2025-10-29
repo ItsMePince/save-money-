@@ -1,13 +1,17 @@
-// src/pages/RepeatedTransactions.tsx
 import React, { useState, useEffect } from 'react';
 import './RepeatedTransactions.css';
 import AddTransaction from './AddTransaction';
+import { useLocation, useNavigate } from "react-router-dom"; // <-- Import เพิ่ม
+
+const API_BASE = "http://localhost:8081";
 
 interface Transaction {
     id: number;
     name: string;
-    date: string;
+    account: string;
     amount: number;
+    date: string;
+    frequency: string;
 }
 
 export interface TransactionFormData {
@@ -18,55 +22,66 @@ export interface TransactionFormData {
     frequency: string;
 }
 
-// --- เพิ่มฟังก์ชัน load/save accounts (เหมือน Home.tsx) ---
-type Account = { name: string; amount: number | string; iconKey?: string };
-
-function loadAccounts(): Account[] {
-    try {
-        const raw = localStorage.getItem("accounts");
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) return parsed;
-        }
-    } catch {}
-    return [
-        { name: "ไทยพาณิชย์", amount: 20000, iconKey: "bank" },
-        { name: "กสิกรไทย", amount: 20000, iconKey: "wallet" },
-    ];
-}
-
-function saveAccounts(list: Account[]) {
-    localStorage.setItem("accounts", JSON.stringify(list));
-    // แจ้งหน้าอื่นๆ ว่ายอดบัญชีเปลี่ยนแล้ว
-    window.dispatchEvent(new Event('accountsUpdated'));
-}
-
 export default function RepeatedTransactions() {
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [showMenu, setShowMenu] = useState<number | null>(null);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const location = useLocation(); // <-- เพิ่ม Hook
+    const navigate = useNavigate(); // <-- เพิ่ม Hook
 
-    // โหลดข้อมูลจาก localStorage
-    const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const fetchTransactions = async () => {
         try {
-            const saved = localStorage.getItem('repeatedTransactions');
-            if (saved) {
-                return JSON.parse(saved);
-            }
+            const res = await fetch(`${API_BASE}/api/repeated-transactions`, {
+                headers: { Accept: "application/json" },
+                credentials: "include",
+            });
+            if (!res.ok) throw new Error("Failed to load repeated transactions");
+            const data: Transaction[] = await res.json();
+            setTransactions(data);
+            return data; // <-- คืนค่า list ที่โหลดมา
         } catch (error) {
             console.error('Error loading transactions:', error);
+            setTransactions([]);
+            return []; // <-- คืนค่า array ว่างถ้า error
         }
-        return [];
-    });
+    };
 
-    // บันทึกข้อมูลลง localStorage ทุกครั้งที่มีการเปลี่ยนแปลง
     useEffect(() => {
-        try {
-            localStorage.setItem('repeatedTransactions', JSON.stringify(transactions));
-        } catch (error) {
-            console.error('Error saving transactions:', error);
-        }
-    }, [transactions]);
+        fetchTransactions();
+    }, []);
+
+    // <-- เพิ่ม useEffect เพื่อดัก State จาก Summary -->
+    useEffect(() => {
+        const checkEditState = async () => {
+            if (location.state?.editId && transactions.length > 0) {
+                const editId = location.state.editId;
+                const transactionToEdit = transactions.find(t => t.id === editId);
+
+                if (transactionToEdit) {
+                    setEditingTransaction(transactionToEdit);
+                    setShowAddForm(true);
+                    // Clear state after using it
+                    navigate(location.pathname, { replace: true, state: null });
+                } else {
+                    // อาจจะโหลดใหม่เผื่อกรณีข้อมูลยังไม่อัปเดต
+                    const updatedList = await fetchTransactions();
+                    const foundAfterReload = updatedList.find(t => t.id === editId);
+                    if (foundAfterReload) {
+                        setEditingTransaction(foundAfterReload);
+                        setShowAddForm(true);
+                        navigate(location.pathname, { replace: true, state: null });
+                    } else {
+                        console.warn(`Transaction with ID ${editId} not found after reload.`);
+                        navigate(location.pathname, { replace: true, state: null }); // Clear state anyway
+                    }
+                }
+            }
+        };
+
+        checkEditState();
+
+    }, [location.state, transactions, navigate]); // <-- เพิ่ม dependencies
 
     const handleEdit = (id: number) => {
         const transaction = transactions.find(t => t.id === id);
@@ -77,12 +92,20 @@ export default function RepeatedTransactions() {
         }
     };
 
-    const handleDelete = (id: number) => {
+    const handleDelete = async (id: number) => {
         if (window.confirm('คุณต้องการลบธุรกรรมนี้หรือไม่?')) {
-            const updatedTransactions = transactions.filter(t => t.id !== id);
-            setTransactions(updatedTransactions);
+            try {
+                const res = await fetch(`${API_BASE}/api/repeated-transactions/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                });
+                if (!res.ok) throw new Error("Failed to delete");
+                setTransactions(prev => prev.filter(t => t.id !== id));
+            } catch (e) {
+                console.error("Delete failed", e);
+                alert("ลบไม่สำเร็จ");
+            }
             setShowMenu(null);
-            // (เลือกได้) ถ้าต้องการคืนยอดบัญชีเมื่อลบ ให้เพิ่ม logic คืนยอดที่นี่
         }
     };
 
@@ -90,10 +113,8 @@ export default function RepeatedTransactions() {
         setShowMenu(showMenu === id ? null : id);
     };
 
-    // --- แก้แยะที่นี่: handleSubmit จะอัปเดตบัญชีจริงด้วย ---
-    const handleSubmit = (data: TransactionFormData) => {
+    const handleSubmit = async (data: TransactionFormData) => {
         console.log('handleSubmit ถูกเรียก!', data);
-        console.log('editingTransaction:', editingTransaction);
 
         const newAmount = parseFloat(data.amount || "0");
         if (isNaN(newAmount)) {
@@ -101,60 +122,38 @@ export default function RepeatedTransactions() {
             return;
         }
 
-        // โหลดบัญชีปัจจุบัน
-        const accounts = loadAccounts();
+        const isEditing = !!editingTransaction;
 
-        if (editingTransaction) {
-            // แก้ไขธุรกรรมที่มีอยู่
-            const updatedTransactions = transactions.map(t =>
-                t.id === editingTransaction.id
-                    ? {
-                        id: t.id,
-                        name: data.name,
-                        date: data.date,
-                        amount: newAmount
-                    }
-                    : t
-            );
-            setTransactions(updatedTransactions);
+        const payload = {
+            ...data,
+            amount: newAmount,
+            id: isEditing ? editingTransaction.id : undefined,
+        };
 
-            // ปรับยอดบัญชี: คำนวณ delta (สมมติ transaction เป็นค่าใช้จ่าย => หักจากบัญชี)
-            // delta >0 => จำนวนใหม่มากกว่าเดิม => หักเพิ่ม ; delta <0 => คืนเงินบางส่วน
-            const delta = newAmount - editingTransaction.amount; // positive -> additional expense
-            const accIdx = accounts.findIndex(a => a.name === data.account);
-            if (accIdx >= 0) {
-                const current = Number(accounts[accIdx].amount || 0);
-                accounts[accIdx].amount = current - delta; // หัก delta (ถ้า delta negative เป็นการคืนเงิน)
-                saveAccounts(accounts);
-            } else {
-                console.warn('ไม่พบบัญชีที่เลือกเพื่อปรับยอด:', data.account);
-            }
+        const url = isEditing
+            ? `${API_BASE}/api/repeated-transactions/${editingTransaction.id}`
+            : `${API_BASE}/api/repeated-transactions`;
 
+        const method = isEditing ? "PUT" : "POST";
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                credentials: "include",
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+
+            fetchTransactions();
+            setShowAddForm(false);
             setEditingTransaction(null);
-        } else {
-            // เพิ่มธุรกรรมใหม่
-            const newTransaction: Transaction = {
-                id: Date.now(),
-                name: data.name,
-                date: data.date,
-                amount: newAmount
-            };
-            console.log('เพิ่มธุรกรรมใหม่:', newTransaction);
-            const updatedTransactions = [...transactions, newTransaction];
-            console.log('รายการทั้งหมด:', updatedTransactions);
-            setTransactions(updatedTransactions);
 
-            // หักยอดจากบัญชีที่เลือก (สมมติเป็นค่าใช้จ่าย)
-            const accIdx = accounts.findIndex(a => a.name === data.account);
-            if (accIdx >= 0) {
-                const current = Number(accounts[accIdx].amount || 0);
-                accounts[accIdx].amount = current - newAmount;
-                saveAccounts(accounts);
-            } else {
-                console.warn('ไม่พบบัญชีที่เลือกเพื่อหักยอด:', data.account);
-            }
+        } catch (e: any) {
+            console.error("Submit failed", e);
+            alert(`บันทึกไม่สำเร็จ: ${e.message}`);
         }
-        setShowAddForm(false);
     };
 
     const handleCancel = () => {
@@ -162,18 +161,16 @@ export default function RepeatedTransactions() {
         setEditingTransaction(null);
     };
 
-    console.log('transactions ปัจจุบัน:', transactions);
+    console.log('transactions ปัจจุบัน (จาก API):', transactions);
     console.log('showAddForm:', showAddForm);
 
-    // ถ้าแสดงฟอร์มเพิ่ม/แก้ไขธุรกรรม
     if (showAddForm) {
-        // เตรียมข้อมูลเริ่มต้นสำหรับแก้ไข
         const initialData = editingTransaction ? {
             name: editingTransaction.name,
-            account: '',
+            account: editingTransaction.account,
             amount: String(editingTransaction.amount),
             date: editingTransaction.date,
-            frequency: 'ทุกเดือน'
+            frequency: editingTransaction.frequency
         } : undefined;
 
         return (
@@ -186,10 +183,8 @@ export default function RepeatedTransactions() {
         );
     }
 
-    // ... (ส่วนแสดงรายการเดิมไม่เปลี่ยน)
     return (
         <div className="repeated-transactions">
-            {/* existing UI below (unchanged) */}
             <div className="header">
                 <h1>ธุรกรรมที่เกิดซ้ำ</h1>
                 <button className="add-btn" onClick={() => {

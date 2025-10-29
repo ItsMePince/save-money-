@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime; // Import LocalDateTime
+import java.time.LocalTime;   // Import LocalTime
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -35,26 +37,39 @@ class ExpenseControllerIT {
     private MockHttpSession session;
     private User user;
 
+    // ต้องสันนิษฐานว่า CreateExpenseRequest อยู่ใน package เดียวกัน (ไม่ใช่ inner class)
+    // (หากย้ายไป DTO package อื่น ต้อง import)
+    // private static class CreateExpenseRequest {
+    //     public String type;
+    //     public String category;
+    //     public double amount;
+    //     public String note;
+    //     public String place;
+    //     public LocalDateTime occurredAt; // <--- CHANGED
+    //     public String paymentMethod;
+    //     public String iconKey;
+    // }
+
     @BeforeEach
     void setup() {
         expenseRepo.deleteAll();
         userRepo.deleteAll();
-
         user = new User("john", "pass123", "john@example.com");
         userRepo.save(user);
-
         session = new MockHttpSession();
         session.setAttribute("username", user.getUsername());
     }
 
-    private ExpenseController.CreateExpenseRequest sampleRequest() {
-        ExpenseController.CreateExpenseRequest req = new ExpenseController.CreateExpenseRequest();
+    // อัปเดต DTO ให้ตรงกับ Controller (สันนิษฐานว่า CreateExpenseRequest เป็น class แยก)
+    private CreateExpenseRequest sampleRequest() {
+        // ใช้ CreateExpenseRequest (ไม่ใช่ ExpenseController.CreateExpenseRequest)
+        CreateExpenseRequest req = new CreateExpenseRequest();
         req.type = "ค่าใช้จ่าย";
         req.category = "อาหาร";
         req.amount = 120.50;
         req.note = "ข้าวมันไก่";
         req.place = "ตลาด";
-        req.date = LocalDate.now().toString();
+        req.occurredAt = LocalDateTime.now(); // <--- CHANGED (from date: String)
         req.paymentMethod = "CASH";
         req.iconKey = "🍚";
         return req;
@@ -64,7 +79,6 @@ class ExpenseControllerIT {
     @Test
     void createExpense_success() throws Exception {
         var req = sampleRequest();
-
         mockMvc.perform(post("/api/expenses")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -72,14 +86,12 @@ class ExpenseControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.category").value("อาหาร"));
-
         assertThat(expenseRepo.findAll()).hasSize(1);
     }
 
     @Test
     void createExpense_unauthorized() throws Exception {
         var req = sampleRequest();
-
         mockMvc.perform(post("/api/expenses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
@@ -87,11 +99,11 @@ class ExpenseControllerIT {
     }
 
     // ---------- Shortcuts (/incomes, /spendings) ----------
+    // (Test 2 ตัวนี้ยังใช้ได้ เพราะ controller ใหม่มี logic normalizeType)
     @Test
     void createIncome_shortcut_setsTypeIncome() throws Exception {
-        var req = sampleRequest();        // ไม่สน type ที่ส่งมา เพราะ endpoint จะบังคับเป็น "รายได้"
+        var req = sampleRequest();
         req.type = "ค่าใช้จ่าย";
-
         mockMvc.perform(post("/api/expenses/incomes")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,7 +114,7 @@ class ExpenseControllerIT {
 
     @Test
     void createSpending_shortcut_setsTypeExpense() throws Exception {
-        var req = sampleRequest(); // เดิมก็ "ค่าใช้จ่าย"
+        var req = sampleRequest();
         mockMvc.perform(post("/api/expenses/spendings")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -119,7 +131,7 @@ class ExpenseControllerIT {
         e.setType(Expense.EntryType.EXPENSE);
         e.setCategory("เดินทาง");
         e.setAmount(BigDecimal.valueOf(50));
-        e.setDate(LocalDate.now());
+        e.setOccurredAt(LocalDateTime.now()); // <--- CHANGED (from setDate)
         expenseRepo.save(e);
 
         mockMvc.perform(get("/api/expenses").session(session))
@@ -135,7 +147,8 @@ class ExpenseControllerIT {
         e1.setType(Expense.EntryType.EXPENSE);
         e1.setCategory("ของใช้");
         e1.setAmount(BigDecimal.valueOf(100));
-        e1.setDate(LocalDate.of(2025, 9, 1));
+        // Controller ค้นหาแบบ atStartOfDay()
+        e1.setOccurredAt(LocalDate.of(2025, 9, 1).atStartOfDay()); // <--- CHANGED
         expenseRepo.save(e1);
 
         Expense e2 = new Expense();
@@ -143,15 +156,16 @@ class ExpenseControllerIT {
         e2.setType(Expense.EntryType.EXPENSE);
         e2.setCategory("อาหาร");
         e2.setAmount(BigDecimal.valueOf(200));
-        e2.setDate(LocalDate.of(2025, 9, 20));
+        e2.setOccurredAt(LocalDate.of(2025, 9, 20).atStartOfDay()); // <--- CHANGED
         expenseRepo.save(e2);
 
+        // Controller จะค้นหา (2025-09-01 00:00:00) ถึง (2025-09-10 23:59:59)
         mockMvc.perform(get("/api/expenses/range")
                         .param("start", "2025-09-01")
                         .param("end", "2025-09-10")
                         .session(session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$.length()").value(1)) // e1 (9/1) ถูกรวม, e2 (9/20) ไม่ถูกรวม
                 .andExpect(jsonPath("$[0].category").value("ของใช้"));
     }
 
@@ -162,12 +176,15 @@ class ExpenseControllerIT {
 
         Expense a = new Expense();
         a.setUser(user); a.setType(Expense.EntryType.EXPENSE);
-        a.setCategory("start"); a.setAmount(new BigDecimal("1.00")); a.setDate(d1);
+        a.setCategory("start"); a.setAmount(new BigDecimal("1.00"));
+        a.setOccurredAt(d1.atStartOfDay()); // <--- CHANGED (00:00:00)
         expenseRepo.save(a);
 
         Expense b = new Expense();
         b.setUser(user); b.setType(Expense.EntryType.EXPENSE);
-        b.setCategory("end"); b.setAmount(new BigDecimal("2.00")); b.setDate(d2);
+        b.setCategory("end"); b.setAmount(new BigDecimal("2.00"));
+        // Controller ค้นหาถึง 23:59:59 ของวันสิ้นสุด
+        a.setOccurredAt(d2.atTime(LocalTime.of(23, 59, 59))); // <--- CHANGED
         expenseRepo.save(b);
 
         mockMvc.perform(get("/api/expenses/range")
@@ -175,7 +192,7 @@ class ExpenseControllerIT {
                         .param("end", d2.toString())
                         .session(session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$.length()").value(2)); // ทั้งคู่ควรถูกรวม
     }
 
     // ---------- Update ----------
@@ -186,10 +203,10 @@ class ExpenseControllerIT {
         e.setType(Expense.EntryType.EXPENSE);
         e.setCategory("เดินทาง");
         e.setAmount(BigDecimal.valueOf(50));
-        e.setDate(LocalDate.now());
+        e.setOccurredAt(LocalDateTime.now()); // <--- CHANGED
         expenseRepo.save(e);
 
-        var req = sampleRequest();
+        var req = sampleRequest(); // req จะใช้ occurredAt (LocalDateTime)
         req.category = "แก้ไขแล้ว";
 
         mockMvc.perform(put("/api/expenses/" + e.getId())
@@ -203,7 +220,6 @@ class ExpenseControllerIT {
     @Test
     void updateExpense_notFound() throws Exception {
         var req = sampleRequest();
-
         mockMvc.perform(put("/api/expenses/999999")
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -219,7 +235,7 @@ class ExpenseControllerIT {
         e.setType(Expense.EntryType.EXPENSE);
         e.setCategory("A");
         e.setAmount(new BigDecimal("10.00"));
-        e.setDate(LocalDate.of(2025, 9, 5));
+        e.setOccurredAt(LocalDate.of(2025, 9, 5).atStartOfDay()); // <--- CHANGED
         expenseRepo.save(e);
 
         // ล็อกอินเป็น user B
@@ -244,10 +260,12 @@ class ExpenseControllerIT {
     }
 
     // ---------- Date parse + persist fields ----------
+    // (Test นี้ต้องเขียนใหม่ทั้งหมด เพราะ controller ไม่ parse String date แล้ว)
     @Test
-    void create_withSlashDate_parsedSuccessfully_andPersistsFields() throws Exception {
+    void create_withLocalDateTime_persistsFields() throws Exception {
         var req = sampleRequest();
-        req.date = "1/9/2025";   // d/M/uuuu
+        LocalDateTime testTime = LocalDateTime.of(2025, 9, 1, 14, 30, 0);
+        req.occurredAt = testTime; // <--- SET Specific LocalDateTime
         req.paymentMethod = "CARD";
         req.iconKey = "🍜";
 
@@ -256,17 +274,20 @@ class ExpenseControllerIT {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.date").value("2025-09-01"))
+                // Jackson default ISO-8601 serialization
+                .andExpect(jsonPath("$.occurredAt").value("2025-09-01T14:30:00"))
                 .andExpect(jsonPath("$.paymentMethod").value("CARD"))
                 .andExpect(jsonPath("$.iconKey").value("🍜"))
                 .andReturn();
 
-        // ตรวจ BigDecimal ใน DB
+        // ตรวจ BigDecimal และ LocalDateTime ใน DB
         var json = mvcRes.getResponse().getContentAsString();
         var saved = objectMapper.readTree(json);
         Long id = saved.get("id").asLong();
+
         var inDb = expenseRepo.findById(id).orElseThrow();
         assertThat(inDb.getAmount()).isEqualByComparingTo("120.50");
+        assertThat(inDb.getOccurredAt()).isEqualTo(testTime); // <--- Check LocalDateTime
     }
 
     // ---------- Unauthorized (endpoints อื่น ๆ) ----------
@@ -297,7 +318,7 @@ class ExpenseControllerIT {
         e.setType(Expense.EntryType.EXPENSE);
         e.setCategory("ของใช้");
         e.setAmount(BigDecimal.valueOf(30));
-        e.setDate(LocalDate.now());
+        e.setOccurredAt(LocalDateTime.now()); // <--- CHANGED
         expenseRepo.save(e);
 
         mockMvc.perform(delete("/api/expenses/" + e.getId()).session(session))
@@ -305,7 +326,6 @@ class ExpenseControllerIT {
 
         assertThat(expenseRepo.findAll()).isEmpty();
     }
-
 
     @Test
     void unauthorized_whenSessionUserNotExist() throws Exception {
@@ -322,5 +342,4 @@ class ExpenseControllerIT {
                         .content(objectMapper.writeValueAsString(sampleRequest())))
                 .andExpect(status().isUnauthorized());
     }
-
 }

@@ -1,25 +1,15 @@
-// src/main/java/my_financial_app/demo/Controller/ExpenseController.java
 package my_financial_app.demo.Controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.ResolverStyle;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -32,8 +22,8 @@ import my_financial_app.demo.Repository.UserRepository;
 @RestController
 @RequestMapping("/api/expenses")
 @CrossOrigin(
-    origins = {"http://localhost:3000","http://localhost:5173"},
-    allowCredentials = "true"
+        origins = {"http://localhost:3000","http://localhost:5173"},
+        allowCredentials = "true"
 )
 public class ExpenseController {
 
@@ -51,24 +41,19 @@ public class ExpenseController {
             HttpServletRequest request
     ) {
         User owner = requireLoginUser(request);
-        if (owner == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
+        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+
         Expense e = new Expense();
         e.setUser(owner);
-        Expense.EntryType entryType = "รายได้".equals(req.type)
-                ? Expense.EntryType.INCOME
-                : Expense.EntryType.EXPENSE;
-        e.setType(entryType);
+        e.setType(normalizeType(req.type));
         e.setCategory(req.category);
         e.setAmount(BigDecimal.valueOf(req.amount));
         e.setNote(req.note);
         e.setPlace(req.place);
-        e.setDate(parseDateFlexible(req.date));
+        e.setOccurredAt(req.occurredAt);
         e.setPaymentMethod(req.paymentMethod);
         e.setIconKey(req.iconKey);
-        Expense saved = repo.save(e);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(repo.save(e));
     }
 
     @PostMapping("/incomes")
@@ -76,7 +61,7 @@ public class ExpenseController {
             @Valid @RequestBody CreateExpenseRequest req,
             HttpServletRequest request
     ) {
-        req.type = "รายได้";
+        req.type = "INCOME";
         return create(req, request);
     }
 
@@ -85,18 +70,15 @@ public class ExpenseController {
             @Valid @RequestBody CreateExpenseRequest req,
             HttpServletRequest request
     ) {
-        req.type = "ค่าใช้จ่าย";
+        req.type = "EXPENSE";
         return create(req, request);
     }
 
     @GetMapping
     public ResponseEntity<?> listMine(HttpServletRequest request) {
         User owner = requireLoginUser(request);
-        if (owner == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
-        List<Expense> result = repo.findByUserIdOrderByDateDesc(owner.getId());
-        return ResponseEntity.ok(result);
+        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+        return ResponseEntity.ok(repo.findByUserIdOrderByOccurredAtDesc(owner.getId()));
     }
 
     @GetMapping("/range")
@@ -106,13 +88,16 @@ public class ExpenseController {
             HttpServletRequest request
     ) {
         User owner = requireLoginUser(request);
-        if (owner == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
-        LocalDate s = parseDateFlexible(start);
-        LocalDate e = parseDateFlexible(end);
-        List<Expense> result = repo.findByUserIdAndDateBetweenOrderByDateDesc(owner.getId(), s, e);
-        return ResponseEntity.ok(result);
+        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+
+        LocalDate s = LocalDate.parse(start);
+        LocalDate e = LocalDate.parse(end);
+        LocalDateTime from = s.atStartOfDay();
+        LocalDateTime to = e.atTime(LocalTime.of(23, 59, 59));
+
+        return ResponseEntity.ok(
+                repo.findByUserIdAndOccurredAtBetweenOrderByOccurredAtDesc(owner.getId(), from, to)
+        );
     }
 
     @PutMapping("/{id}")
@@ -122,42 +107,29 @@ public class ExpenseController {
             HttpServletRequest request
     ) {
         User owner = requireLoginUser(request);
-        if (owner == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
+        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+
         Optional<Expense> opt = repo.findByIdAndUserId(id, owner.getId());
-        if (opt.isEmpty()) {
-            return ResponseEntity.status(404).body("Not found");
-        }
+        if (opt.isEmpty()) return ResponseEntity.status(404).body("Not found");
+
         Expense e = opt.get();
-        Expense.EntryType entryType = "รายได้".equals(req.type)
-                ? Expense.EntryType.INCOME
-                : Expense.EntryType.EXPENSE;
-        e.setType(entryType);
+        e.setType(normalizeType(req.type));
         e.setCategory(req.category);
         e.setAmount(BigDecimal.valueOf(req.amount));
         e.setNote(req.note);
         e.setPlace(req.place);
-        e.setDate(parseDateFlexible(req.date));
+        e.setOccurredAt(req.occurredAt);
         e.setPaymentMethod(req.paymentMethod);
         e.setIconKey(req.iconKey);
-        Expense saved = repo.save(e);
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(repo.save(e));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteOne(
-            @PathVariable Long id,
-            HttpServletRequest request
-    ) {
+    public ResponseEntity<?> deleteOne(@PathVariable Long id, HttpServletRequest request) {
         User owner = requireLoginUser(request);
-        if (owner == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
+        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
         Optional<Expense> opt = repo.findByIdAndUserId(id, owner.getId());
-        if (opt.isEmpty()) {
-            return ResponseEntity.status(404).body("Not found");
-        }
+        if (opt.isEmpty()) return ResponseEntity.status(404).body("Not found");
         repo.deleteById(id);
         return ResponseEntity.noContent().build();
     }
@@ -169,30 +141,12 @@ public class ExpenseController {
         return userRepo.findByUsername(username).orElse(null);
     }
 
-    private static LocalDate parseDateFlexible(String raw) {
-        if (raw == null) return null;
-        String s = raw.trim();
-        try {
-            DateTimeFormatter iso = DateTimeFormatter.ofPattern("uuuu-MM-dd")
-                                                     .withResolverStyle(ResolverStyle.STRICT);
-            return LocalDate.parse(s, iso);
-        } catch (Exception ignore) {}
-        try {
-            DateTimeFormatter dmY = DateTimeFormatter.ofPattern("d/M/uuuu", Locale.US)
-                                                     .withResolverStyle(ResolverStyle.STRICT);
-            return LocalDate.parse(s, dmY);
-        } catch (Exception ignore) {}
-        return LocalDate.parse(s);
-    }
-
-    public static class CreateExpenseRequest {
-        public String type;
-        public String category;
-        public double amount;
-        public String note;
-        public String place;
-        public String date;
-        public String paymentMethod;
-        public String iconKey;
+    private static Expense.EntryType normalizeType(String raw) {
+        if (raw == null) return Expense.EntryType.EXPENSE;
+        String s = raw.trim().toLowerCase(Locale.ROOT);
+        if (s.equals("รายได้") || s.equals("income") || s.equals("incomes")) return Expense.EntryType.INCOME;
+        if (s.equals("ค่าใช้จ่าย") || s.equals("expense") || s.equals("expenses")
+                || s.equals("spending") || s.equals("spendings")) return Expense.EntryType.EXPENSE;
+        return Expense.EntryType.EXPENSE;
     }
 }

@@ -1,4 +1,3 @@
-// src/pages/expense.tsx
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./expense.css";
@@ -23,7 +22,6 @@ import { useEditPrefill } from "../hooks/useEditPrefill";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
 
-/* ===== draft helpers ===== */
 const DRAFT_KEY = "expense_draft_v2";
 const safeParse = (raw: any) => { try { return JSON.parse(raw ?? ""); } catch { return {}; } };
 const readDraftNow = () => safeParse(sessionStorage.getItem(DRAFT_KEY));
@@ -44,7 +42,6 @@ const getNowHHMM = () => {
 };
 const getNowLocalDT = () => `${getTodayISO()}T${getNowHHMM()}`;
 
-/* icons */
 const customIconByKey: Record<string, React.FC<any>> = {
     food: Utensils, pizza: Pizza, drumstick: Drumstick, coffee: Coffee, beer: Beer,
     cupsoda: CupSoda, icecream: IceCream, candy: Candy, cake: Cake,
@@ -95,7 +92,7 @@ const IconCheck = () => (
 export default function Expense() {
     const navigate = useNavigate();
     const { tempCategory, clearTempCategory } = useTempCategory();
-    const { payment, clearPayment } = usePaymentMethod();
+    const { payment, setPayment, clearPayment } = usePaymentMethod();
 
     const draft = readDraftNow();
 
@@ -110,16 +107,15 @@ export default function Expense() {
     const [hydrated, setHydrated] = useState(false);
     useEffect(() => { setHydrated(true); }, []);
 
-    /* ===== Prefill edit mode (from Summary) ===== */
     useEditPrefill((d) => {
         setCategory((d.category as Category) ?? "อื่นๆ");
         setAmount(String(d.amount ?? "0"));
         setNote(d.note ?? "");
         setPlace(d.place ?? "");
         setDt(d.datetime || `${d.date}T${getNowHHMM()}`);
+        if (d.paymentMethod) setPayment({ name: d.paymentMethod });
     }, "edit_id_expense");
 
-    /* ===== pick place from /location (comes back via sessionStorage) ===== */
     useEffect(() => {
         const apply = () => {
             const name = sessionStorage.getItem("selectedPlaceName");
@@ -134,7 +130,6 @@ export default function Expense() {
         return () => window.removeEventListener("focus", apply);
     }, []);
 
-    /* ===== switch entry type ===== */
     const [typeOpen, setTypeOpen] = useState(false);
     const [entryType] = useState<"ค่าใช้จ่าย" | "รายได้">("ค่าใช้จ่าย");
     const menuOptions: Array<"ค่าใช้จ่าย" | "รายได้"> = entryType === "ค่าใช้จ่าย" ? ["รายได้"] : ["ค่าใช้จ่าย"];
@@ -143,7 +138,6 @@ export default function Expense() {
         navigate(target === "รายได้" ? "/income" : "/expense");
     };
 
-    /* ===== sync category when coming from custom ===== */
     useEffect(() => {
         if (tempCategory && category !== "อื่นๆ") {
             setCategory("อื่นๆ");
@@ -151,13 +145,11 @@ export default function Expense() {
         }
     }, [tempCategory]);
 
-    /* ===== auto-save draft ===== */
     useEffect(() => {
         if (!hydrated) return;
-        saveDraft({ category, amount, note, place, dt });
-    }, [category, amount, note, place, dt, hydrated]);
+        saveDraft({ category, amount, note, place, dt, payment });
+    }, [category, amount, note, place, dt, payment, hydrated]);
 
-    /* ===== datetime picker ===== */
     const dtRef = useRef<HTMLInputElement>(null);
     const openDateTimePicker = (e?: React.MouseEvent | React.KeyboardEvent) => {
         e?.preventDefault();
@@ -167,7 +159,6 @@ export default function Expense() {
         else { el.click(); el.focus(); }
     };
 
-    /* ===== keypad + typeable amount ===== */
     const pad = useMemo(() => ["1","2","3","4","5","6","7","8","9",".","0","⌫"], []);
     const onTapKey = (k: string) => {
         let next = amount;
@@ -191,7 +182,6 @@ export default function Expense() {
         saveDraft({ amount: v });
     };
 
-    /* ===== reset ===== */
     const resetForm = () => {
         setCategory("อาหาร"); setAmount("0"); setNote(""); setPlace("");
         setDt(getNowLocalDT());
@@ -200,10 +190,8 @@ export default function Expense() {
         sessionStorage.removeItem("edit_id_expense");
     };
 
-    /* ===== submit to backend ===== */
     const onConfirm = async () => {
-        // note optional; require amount>0, place, dt
-        if (!amount || amount === "0" || !place.trim() || !dt) {
+        if (!amount || amount === "0" || !place.trim() || !dt || !payment?.name) {
             alert("Required ❌");
             return;
         }
@@ -214,19 +202,16 @@ export default function Expense() {
         const iconKey =
             category === "อื่นๆ" ? (tempCategory?.iconKey || "more") : defaultIconKeyByCategory[category];
 
-        const dateOnly = dt.slice(0, 10); // "YYYY-MM-DD"
-        const occurredAtISO = new Date(`${dt}:00`).toISOString(); // local -> ISO UTC
+        const occurredAtISO = `${dt}:00`;
 
-        // >>> Backend expects EntryType enum: EXPENSE/INCOME
         const payload = {
             type: "EXPENSE",
             category: finalCategory,
             amount: parseFloat(amount || "0"),
-            note,                 // may be ""
+            note,
             place,
-            date: dateOnly,       // LocalDate
-            occurredAt: occurredAtISO, // OffsetDateTime
-            paymentMethod: payment?.name ?? null,
+            occurredAt: occurredAtISO,
+            paymentMethod: payment.name,
             iconKey,
         };
 
@@ -265,7 +250,6 @@ export default function Expense() {
 
     return (
         <div className="calc-wrap">
-            {/* type switch */}
             <div className="type-pill" style={{ position: "relative" }}>
                 <button className="pill" onClick={() => setTypeOpen(o => !o)}>
                     <span>{entryType}</span><ChevronDown />
@@ -292,7 +276,6 @@ export default function Expense() {
                 )}
             </div>
 
-            {/* categories */}
             <div className="category-row">
                 <button className={`cat ${category === "อาหาร" ? "active" : ""}`}
                         onClick={() => { setCategory("อาหาร"); saveDraft({ category: "อาหาร" }); }}>
@@ -313,7 +296,6 @@ export default function Expense() {
                 </button>
             </div>
 
-            {/* amount */}
             <div className="amount">
                 <input
                     className="amount-input"
@@ -329,7 +311,6 @@ export default function Expense() {
                 <span className="currency">฿</span>
             </div>
 
-            {/* date-time + payment */}
             <div className="segments" style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <button
                     type="button"
@@ -355,7 +336,7 @@ export default function Expense() {
                 <button
                     className="seg"
                     onClick={() => {
-                        saveDraft({ category, amount, note, place, dt });
+                        saveDraft({ category, amount, note, place, dt, payment });
                         navigate("/accountselect");
                     }}
                 >
@@ -363,7 +344,6 @@ export default function Expense() {
                 </button>
             </div>
 
-            {/* note/place */}
             <div className="inputs">
                 <div className="input">
                     <ClipboardList size={18} strokeWidth={2} className="icon" />
@@ -380,7 +360,6 @@ export default function Expense() {
                 </div>
             </div>
 
-            {/* keypad */}
             <div className="keypad">
                 {pad.map((k,i)=>(
                     <button key={i} className={`key ${k==="⌫"?"danger":""}`} onClick={()=> onTapKey(k)}>

@@ -18,20 +18,20 @@ const ICONS = [
     { key: "coins", label: "เหรียญ", Icon: Coins },
 ] as const;
 
-type Account = { name: string; amount: number; iconKey?: string; type?: AccountType };
+// (ข้อมูล Account ที่รับมาจาก state ตอนกด "แก้ไข")
+// ‼️ หมายเหตุ: คุณจะต้องเพิ่ม 'id' เข้ามาใน type นี้ด้วยในอนาคต
+//               เพื่อให้ "แก้ไข" (Edit) ใช้งานได้
+type AccountLocationState = {
+    id?: number; // <--- เราต้องการ ID จาก Database ตรงนี้
+    name: string;
+    amount: number;
+    iconKey?: string;
+    type?: AccountType
+};
 
-function loadAccounts(): Account[] {
-    try {
-        const raw = localStorage.getItem("accounts");
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
-    }
-}
-function saveAccounts(list: Account[]) {
-    localStorage.setItem("accounts", JSON.stringify(list));
-}
+// --- REMOVED ---
+// ลบ function loadAccounts() และ saveAccounts() ออก
+// เราจะใช้ API เรียกข้อมูลจาก Backend แทน
 
 /* ---------- helpers: amount + caret ---------- */
 const formatIntWithGrouping = (digitsOnly: string) => digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -53,7 +53,9 @@ const parseMoney = (s: string) => Number((s || "0").replace(/,/g, ""));
 export default function AccountNew() {
     const navigate = useNavigate();
     const { state } = useLocation();
-    const editState = state as | { mode: "edit"; index: number; account: Account } | undefined;
+
+    // state ที่รับมาตอนกด "แก้ไข" (ถ้ามี)
+    const editState = state as | { mode: "edit"; account: AccountLocationState } | undefined;
 
     const [name, setName] = useState("");
     const [type, setType] = useState<AccountType | "">("");
@@ -100,28 +102,67 @@ export default function AccountNew() {
     };
     // -------------------------------------------------------
 
-    function handleSubmit(e: React.FormEvent) {
+    // --- CHANGED ---
+    // เปลี่ยน handleSubmit ให้เรียก API (fetch) แทน localStorage
+    async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+
         const amt = parseMoney(amount);
         if (!name.trim() || !type || Number.isNaN(amt)) {
             alert("กรอกข้อมูลให้ครบและจำนวนเงินให้ถูกต้องก่อนน้าา");
             return;
         }
-        const nextItem: Account = { name: name.trim(), amount: amt, iconKey, type: type as AccountType };
-        const list = loadAccounts();
 
-        if (
-            editState?.mode === "edit" &&
-            Number.isInteger(editState.index) &&
-            editState.index >= 0 &&
-            editState.index < list.length
-        ) {
-            list[editState.index] = nextItem;
-        } else {
-            list.push(nextItem);
+        // 1. สร้าง JSON payload ให้ตรงกับ CreateAccountRequest.java
+        const payload = {
+            name: name.trim(),
+            type: type as AccountType, // "ธนาคาร", "เงินสด" (Backend รับ String ไทยได้)
+            amount: amt,               // Backend รับเป็น Double
+            iconKey: iconKey,
+        };
+
+        const isEditMode = editState?.mode === 'edit';
+
+        // กำหนด URL และ Method (สร้าง = POST, แก้ไข = PUT)
+        let url = "http://localhost:8081/api/accounts";
+        let method = "POST";
+
+        if (isEditMode) {
+            // ‼️ หมายเหตุ: ดูคำอธิบายเรื่อง "แก้ไข" ด้านล่าง
+            const accountId = editState.account.id;
+            if (!accountId) {
+                alert("เกิดข้อผิดพลาด: ไม่พบ ID ของบัญชีที่ต้องการแก้ไข");
+                return;
+            }
+            url = `http://localhost:8081/api/accounts/${accountId}`;
+            method = "PUT";
         }
-        saveAccounts(list);
-        navigate("/home");
+
+        try {
+            // 2. ส่ง Request (ยิง API) ไปหา Spring Boot
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+                // 3. สำคัญมาก! ส่ง Cookie (Session) ไปด้วยเพื่อยืนยันตัวตน
+                credentials: "include"
+            });
+
+            if (response.ok) {
+                // 4. ถ้าสำเร็จ (Backend ตอบ 200 OK)
+                navigate("/home"); // กลับไปหน้าหลัก
+            } else {
+                // 5. ถ้าล้มเหลว (เช่น 401 Unauthorized, 404 Not Found)
+                const errorText = await response.text();
+                alert(`บันทึกไม่สำเร็จ: ${errorText}`);
+            }
+        } catch (error) {
+            // 6. กรณี Network Error (เชื่อมต่อ Backend ไม่ได้)
+            console.error("Error submitting account:", error);
+            alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+        }
     }
 
     return (
