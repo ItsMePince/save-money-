@@ -1,4 +1,3 @@
-// src/pages/income.tsx
 // @ts-nocheck
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./income.css";
@@ -108,6 +107,7 @@ export default function Income() {
         setNote(d.note ?? "");
         setPlace(d.place ?? "");
         setDt(d.datetime || `${d.date}T${getNowHHMM()}`);
+        if (d.paymentMethod) setPayment({ name: d.paymentMethod });
     }, "edit_id_income");
 
     useEffect(() => {
@@ -172,30 +172,30 @@ export default function Income() {
     }, [place]);
 
     const resetAll = () => {
-        setCategory("ค่าขนม"); setCustomCat(null); setPayment(null);
+        setCategory("ค่าขนม"); setCustomCat(null);
         setAmount("0"); setNote(""); setPlace(""); setDt(getNowLocalDT()); setMenuOpen(false);
+        setPayment(null);
         sessionStorage.removeItem(DRAFT_KEY);
         sessionStorage.removeItem("edit_id_income");
     };
 
     const onConfirm = async () => {
-        if (!amount || amount === "0" || !place.trim() || !dt) {
-            alert("Required ❌"); return;
+        if (!amount || amount === "0" || !place.trim() || !dt || !payment?.name) {
+            alert("Required ❌");
+            return;
         }
         const finalCategory = category === "อื่นๆ" && customCat?.label ? customCat.label : category;
         const iconKey = category === "อื่นๆ" ? (customCat?.icon || "more") : defaultIconKeyByCategory[category];
-        const dateOnly = dt.slice(0, 10);
-        const occurredAtISO = new Date(`${dt}:00`).toISOString();
+        const occurredAtISO = `${dt}:00`;
 
         const payload = {
-            type: "รายได้",
+            type: "INCOME",
             category: finalCategory,
             amount: parseFloat(amount || "0"),
             note,
             place,
-            date: dateOnly,
             occurredAt: occurredAtISO,
-            paymentMethod: payment?.name ?? null,
+            paymentMethod: payment.name,
             iconKey,
         };
 
@@ -305,7 +305,7 @@ export default function Income() {
                     style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", position: "relative" }}
                 >
                     <CalendarDays className="icon" size={18} />
-                    <span>{dt ? formatDateTimeThai(dt) : "วัน / เดือน / ปี เวลา"}</span>
+                    <span>{dt ? `${dt.split("T")[0].split("-").reverse().join("/") } ${dt.split("T")[1]} น.` : "วัน / เดือน / ปี เวลา"}</span>
 
                     <input
                         ref={dtRef}

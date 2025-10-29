@@ -4,19 +4,36 @@ import BottomNav from "./buttomnav";
 import { useNavigate } from "react-router-dom";
 import { usePaymentMethod } from "../PaymentMethodContext";
 import { Building2, Banknote, Landmark, CreditCard, Wallet, PiggyBank, Coins } from "lucide-react";
-//comment
+
+const API_BASE = (import.meta as any)?.env?.VITE_API_BASE || "http://localhost:8081";
+
 type FilterKey = "ทั้งหมด" | "เงินสด" | "ธนาคาร" | "บัตรเครดิต";
-type AccountType = "เงินสด" | "ธนาคาร" | "บัตรเครดิต";
-type StoredAccount = { name: string; amount: number; iconKey?: string; type?: AccountType };
+
 type AccountItem = {
-    id: string;
+    id: number;
     label: string;
-    type: AccountType;
+    type: FilterKey;
     favorite: boolean;
     favoritedAt?: number;
     iconKey?: string;
     amount: number;
 };
+
+type ApiAccount = {
+    id: number;
+    name: string;
+    amount: number;
+    iconKey?: string;
+    type: "BANK" | "CASH" | "CREDIT_CARD";
+};
+
+function mapApiTypeToFilterKey(apiType: ApiAccount['type']): FilterKey {
+    if (apiType === "BANK") return "ธนาคาร";
+    if (apiType === "CASH") return "เงินสด";
+    if (apiType === "CREDIT_CARD") return "บัตรเครดิต";
+    return "เงินสด";
+}
+
 
 const OPTIONS: FilterKey[] = ["ทั้งหมด", "เงินสด", "ธนาคาร", "บัตรเครดิต"];
 const FAV_KEY = "accountFavs";
@@ -31,13 +48,6 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
     coins: Coins,
 };
 
-function loadAccounts(): StoredAccount[] {
-    try {
-        const raw = localStorage.getItem("accounts");
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-    } catch { return []; }
-}
 function loadFavs(): Record<string, { favorite: boolean; favoritedAt?: number }> {
     try {
         const raw = localStorage.getItem(FAV_KEY);
@@ -64,34 +74,47 @@ export default function AccountSelect() {
     const navigate = useNavigate();
     const { setPayment } = usePaymentMethod();
 
-    const rebuild = () => {
-        const accs = loadAccounts();
+    const fetchAndBuildItems = async () => {
         const favs = loadFavs();
-        const list: AccountItem[] = accs.map((a, idx) => {
-            const t = (a.type as AccountType) || "เงินสด";
-            const id = `${t}:${a.name}:${idx}`;
-            const fav = favs[id]?.favorite ?? false;
-            return {
-                id,
-                label: a.name,
-                type: t,
-                favorite: fav,
-                favoritedAt: favs[id]?.favoritedAt,
-                iconKey: a.iconKey,
-                amount: typeof a.amount === "number" && !Number.isNaN(a.amount) ? a.amount : 0,
-            };
-        });
-        setItems(list);
+        try {
+            const res = await fetch(`${API_BASE}/api/accounts`, {
+                headers: { Accept: "application/json" },
+                credentials: "include",
+            });
+            if (!res.ok) throw new Error("Failed to fetch accounts");
+
+            const accs: ApiAccount[] = await res.json();
+
+            const list: AccountItem[] = accs.map((a) => {
+                const id = a.id;
+                const fav = favs[String(id)]?.favorite ?? false;
+                return {
+                    id: id,
+                    label: a.name,
+                    type: mapApiTypeToFilterKey(a.type),
+                    favorite: fav,
+                    favoritedAt: favs[String(id)]?.favoritedAt,
+                    iconKey: a.iconKey,
+                    amount: a.amount,
+                };
+            });
+            setItems(list);
+
+        } catch (error) {
+            console.error("Error fetching accounts:", error);
+        }
     };
 
     useEffect(() => {
-        rebuild();
-        const onFocus = () => rebuild();
-        const onStorage = (e: StorageEvent) => { if (e.key === "accounts" || e.key === FAV_KEY) rebuild(); };
-        window.addEventListener("focus", onFocus);
+        fetchAndBuildItems();
+
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === FAV_KEY) {
+                fetchAndBuildItems();
+            }
+        };
         window.addEventListener("storage", onStorage);
         return () => {
-            window.removeEventListener("focus", onFocus);
             window.removeEventListener("storage", onStorage);
         };
     }, []);
@@ -106,13 +129,17 @@ export default function AccountSelect() {
         window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     }, [filter]);
 
-    const toggleFavorite = (id: string) => {
+    const toggleFavorite = (id: number) => {
         setItems(prev => {
             const now = Date.now();
             const next = prev.map(it => it.id === id ? { ...it, favorite: !it.favorite, favoritedAt: !it.favorite ? now : undefined } : it);
+
             const favs = loadFavs();
             const f = next.find(x => x.id === id);
-            if (f) { favs[id] = { favorite: f.favorite, favoritedAt: f.favoritedAt }; saveFavs(favs); }
+            if (f) {
+                favs[String(id)] = { favorite: f.favorite, favoritedAt: f.favoritedAt };
+                saveFavs(favs);
+            }
             return next;
         });
     };
@@ -137,11 +164,17 @@ export default function AccountSelect() {
 
     const pick = (it: AccountItem) => {
         const need = getPendingAmount();
-        if (need > it.amount) {
+        if (need > 0 && need > it.amount) {
             alert(`ยอดเงินในบัญชี "${it.label}" มี ${it.amount.toLocaleString("th-TH")} บาท\nแต่ต้องจ่าย ${need.toLocaleString("th-TH")} บาท\nไม่สามารถเลือกบัญชีนี้ได้`);
             return;
         }
-        setPayment({ id: it.id, name: it.label, favorite: it.favorite });
+
+        setPayment({
+            id: String(it.id),
+            name: it.label,
+            favorite: it.favorite
+        });
+
         if (window.history.length > 1) navigate(-1);
         else navigate("/expense", { replace: true });
     };

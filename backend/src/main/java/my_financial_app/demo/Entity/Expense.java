@@ -1,7 +1,7 @@
 package my_financial_app.demo.Entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
 import jakarta.persistence.Column;
@@ -39,27 +39,25 @@ public class Expense {
     @Column(length = 255)
     private String note;
 
-    @Column(length = 255)
+    @Column(length = 255, nullable = false)
     private String place;
 
-    @Column(nullable = false)
-    private LocalDate date;
-
-    @Column(length = 100)
+    @Column(length = 100, nullable = false)
     private String paymentMethod;
 
     @Column(length = 60)
     private String iconKey;
 
-    /** 🔗 ผู้เป็นเจ้าของรายการ (FK -> users.id) */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(nullable = false)
+    private LocalDateTime occurredAt;
+
+    @Column(nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
-    // --- getters/setters ---
     public Long getId() { return id; }
 
     public EntryType getType() { return type; }
@@ -77,9 +75,6 @@ public class Expense {
     public String getPlace() { return place; }
     public void setPlace(String place) { this.place = place; }
 
-    public LocalDate getDate() { return date; }
-    public void setDate(LocalDate date) { this.date = date; }
-
     public String getPaymentMethod() { return paymentMethod; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
 
@@ -88,6 +83,9 @@ public class Expense {
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+
+    public LocalDateTime getOccurredAt() { return occurredAt; }
+    public void setOccurredAt(LocalDateTime occurredAt) { this.occurredAt = occurredAt; }
 
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }

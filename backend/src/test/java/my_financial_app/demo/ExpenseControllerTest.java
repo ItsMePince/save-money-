@@ -21,11 +21,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -41,7 +42,6 @@ class ExpenseControllerTest {
 
     private String toJson(Object o) throws Exception { return om.writeValueAsString(o); }
 
-    // ----- helpers (ตั้งค่า field ที่ไม่มี setter ด้วย reflection) -----
     private static void set(Object target, String field, Object value) {
         try {
             Field f = target.getClass().getDeclaredField(field);
@@ -60,14 +60,14 @@ class ExpenseControllerTest {
         return u;
     }
 
-    private Expense mkExpense(Long id, User owner, Expense.EntryType type, String category, double amount, LocalDate date) {
+    private Expense mkExpense(Long id, User owner, Expense.EntryType type, String category, double amount, LocalDateTime occurredAt) {
         Expense e = new Expense();
         set(e, "id", id);
         e.setUser(owner);
         e.setType(type);
         e.setCategory(category);
         e.setAmount(BigDecimal.valueOf(amount));
-        e.setDate(date);
+        e.setOccurredAt(occurredAt);
         e.setNote("n");
         e.setPlace("p");
         e.setPaymentMethod("CASH");
@@ -81,13 +81,12 @@ class ExpenseControllerTest {
         return s;
     }
 
-    // ------------- POST /api/expenses (create) -------------
     @Test
     void create_expense_success() throws Exception {
         var user = mkUser(1L, "ken");
         Mockito.when(userRepository.findByUsername("ken")).thenReturn(Optional.of(user));
 
-        var saved = mkExpense(100L, user, Expense.EntryType.EXPENSE, "อาหาร", 120.5, LocalDate.parse("2025-01-05"));
+        var saved = mkExpense(100L, user, Expense.EntryType.EXPENSE, "อาหาร", 120.5, LocalDateTime.parse("2025-01-05T08:00:00"));
         Mockito.when(expenseRepository.save(ArgumentMatchers.any(Expense.class))).thenReturn(saved);
 
         var body = Map.of(
@@ -96,7 +95,7 @@ class ExpenseControllerTest {
                 "amount", 120.5,
                 "note", "ข้าวกลางวัน",
                 "place", "ร้าน A",
-                "date", "2025-01-05",
+                "occurredAt", "2025-01-05T08:00:00",
                 "paymentMethod", "CASH",
                 "iconKey", "food"
         );
@@ -117,22 +116,21 @@ class ExpenseControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // ------------- aliases: /incomes , /spendings -------------
     @Test
     void create_income_viaAlias_success() throws Exception {
         var user = mkUser(1L, "ken");
         Mockito.when(userRepository.findByUsername("ken")).thenReturn(Optional.of(user));
 
-        var saved = mkExpense(101L, user, Expense.EntryType.INCOME, "เงินเดือน", 1000.0, LocalDate.parse("2025-01-01"));
+        var saved = mkExpense(101L, user, Expense.EntryType.INCOME, "เงินเดือน", 1000.0, LocalDateTime.parse("2025-01-01T09:00:00"));
         Mockito.when(expenseRepository.save(ArgumentMatchers.any(Expense.class))).thenReturn(saved);
 
         var body = Map.of(
-                "type", "อะไรก็ได้จะถูก override",
+                "type", "ignored",
                 "category", "เงินเดือน",
                 "amount", 1000.0,
                 "note", "jan",
                 "place", "office",
-                "date", "2025-01-01",
+                "occurredAt", "2025-01-01T09:00:00",
                 "paymentMethod", "BANK",
                 "iconKey", "salary"
         );
@@ -150,16 +148,16 @@ class ExpenseControllerTest {
         var user = mkUser(1L, "ken");
         Mockito.when(userRepository.findByUsername("ken")).thenReturn(Optional.of(user));
 
-        var saved = mkExpense(102L, user, Expense.EntryType.EXPENSE, "เดินทาง", 50.0, LocalDate.parse("2025-01-02"));
+        var saved = mkExpense(102L, user, Expense.EntryType.EXPENSE, "เดินทาง", 50.0, LocalDateTime.parse("2025-01-02T07:30:00"));
         Mockito.when(expenseRepository.save(ArgumentMatchers.any(Expense.class))).thenReturn(saved);
 
         var body = Map.of(
-                "type", "จะถูก override",
+                "type", "ignored",
                 "category", "เดินทาง",
                 "amount", 50.0,
                 "note", "BTS",
                 "place", "BKK",
-                "date", "2025-01-02",
+                "occurredAt", "2025-01-02T07:30:00",
                 "paymentMethod", "CARD",
                 "iconKey", "train"
         );
@@ -172,15 +170,14 @@ class ExpenseControllerTest {
                 .andExpect(jsonPath("$.id").value(102));
     }
 
-    // ------------- GET /api/expenses (list mine) -------------
     @Test
     void listMine_success() throws Exception {
         var user = mkUser(1L, "ken");
         Mockito.when(userRepository.findByUsername("ken")).thenReturn(Optional.of(user));
 
-        var e1 = mkExpense(1L, user, Expense.EntryType.EXPENSE, "อาหาร", 10, LocalDate.parse("2025-01-01"));
-        var e2 = mkExpense(2L, user, Expense.EntryType.EXPENSE, "เดินทาง", 20, LocalDate.parse("2025-01-02"));
-        Mockito.when(expenseRepository.findByUserIdOrderByDateDesc(1L)).thenReturn(List.of(e1, e2));
+        var e1 = mkExpense(1L, user, Expense.EntryType.EXPENSE, "อาหาร", 10, LocalDateTime.parse("2025-01-02T10:00:00"));
+        var e2 = mkExpense(2L, user, Expense.EntryType.EXPENSE, "เดินทาง", 20, LocalDateTime.parse("2025-01-03T11:00:00"));
+        Mockito.when(expenseRepository.findByUserIdOrderByOccurredAtDesc(1L)).thenReturn(List.of(e1, e2));
 
         mvc.perform(get("/api/expenses").session(sessionAs("ken")))
                 .andExpect(status().isOk())
@@ -193,15 +190,14 @@ class ExpenseControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // ------------- GET /api/expenses/range -------------
     @Test
     void listByRange_success() throws Exception {
         var user = mkUser(1L, "ken");
         Mockito.when(userRepository.findByUsername("ken")).thenReturn(Optional.of(user));
 
-        var e = mkExpense(3L, user, Expense.EntryType.EXPENSE, "อื่น ๆ", 33, LocalDate.parse("2025-01-03"));
-        Mockito.when(expenseRepository.findByUserIdAndDateBetweenOrderByDateDesc(
-                1L, LocalDate.parse("2025-01-01"), LocalDate.parse("2025-01-31")
+        var e = mkExpense(3L, user, Expense.EntryType.EXPENSE, "อื่น ๆ", 33, LocalDateTime.parse("2025-01-03T13:00:00"));
+        Mockito.when(expenseRepository.findByUserIdAndOccurredAtBetweenOrderByOccurredAtDesc(
+                Mockito.eq(1L), ArgumentMatchers.any(LocalDateTime.class), ArgumentMatchers.any(LocalDateTime.class)
         )).thenReturn(List.of(e));
 
         mvc.perform(get("/api/expenses/range")
@@ -212,7 +208,6 @@ class ExpenseControllerTest {
                 .andExpect(jsonPath("$", hasSize(1)));
     }
 
-    // ------------- PUT /api/expenses/{id} -------------
     @Test
     void update_notFound_returns404() throws Exception {
         var user = mkUser(1L, "ken");
@@ -223,7 +218,7 @@ class ExpenseControllerTest {
                         .session(sessionAs("ken"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of(
-                                "type","ค่าใช้จ่าย","category","อาหาร","amount",10.0,"date","2025-01-01"
+                                "type","ค่าใช้จ่าย","category","อาหาร","amount",10.0,"occurredAt","2025-01-01T00:00:00"
                         ))))
                 .andExpect(status().isNotFound());
     }
@@ -233,24 +228,23 @@ class ExpenseControllerTest {
         var user = mkUser(1L, "ken");
         Mockito.when(userRepository.findByUsername("ken")).thenReturn(Optional.of(user));
 
-        var existing = mkExpense(5L, user, Expense.EntryType.EXPENSE, "อาหาร", 10, LocalDate.parse("2025-01-01"));
+        var existing = mkExpense(5L, user, Expense.EntryType.EXPENSE, "อาหาร", 10, LocalDateTime.parse("2025-01-01T08:00:00"));
         Mockito.when(expenseRepository.findByIdAndUserId(5L, 1L)).thenReturn(Optional.of(existing));
 
-        var saved = mkExpense(5L, user, Expense.EntryType.EXPENSE, "อาหาร", 99, LocalDate.parse("2025-01-10"));
+        var saved = mkExpense(5L, user, Expense.EntryType.EXPENSE, "อาหาร", 99, LocalDateTime.parse("2025-01-10T00:00:00"));
         Mockito.when(expenseRepository.save(ArgumentMatchers.any(Expense.class))).thenReturn(saved);
 
         mvc.perform(put("/api/expenses/5")
                         .session(sessionAs("ken"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(Map.of(
-                                "type","ค่าใช้จ่าย","category","อาหาร","amount",99.0,"date","2025-01-10",
+                                "type","ค่าใช้จ่าย","category","อาหาร","amount",99.0,"occurredAt","2025-01-10T00:00:00",
                                 "note","n","place","p","paymentMethod","CASH","iconKey","food"
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(5));
     }
 
-    // ------------- DELETE /api/expenses/{id} -------------
     @Test
     void delete_unauthorized() throws Exception {
         mvc.perform(delete("/api/expenses/1"))
@@ -272,9 +266,8 @@ class ExpenseControllerTest {
         var user = mkUser(1L, "ken");
         Mockito.when(userRepository.findByUsername("ken")).thenReturn(Optional.of(user));
 
-        var existing = mkExpense(7L, user, Expense.EntryType.EXPENSE, "อาหาร", 10, LocalDate.parse("2025-01-01"));
+        var existing = mkExpense(7L, user, Expense.EntryType.EXPENSE, "อาหาร", 10, LocalDateTime.parse("2025-01-01T08:00:00"));
         Mockito.when(expenseRepository.findByIdAndUserId(7L, 1L)).thenReturn(Optional.of(existing));
-        // deleteById เป็น void → ไม่ต้อง mock เพิ่ม
 
         mvc.perform(delete("/api/expenses/7").session(sessionAs("ken")))
                 .andExpect(status().isNoContent());

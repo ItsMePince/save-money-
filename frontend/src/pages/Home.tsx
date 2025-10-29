@@ -1,4 +1,3 @@
-// src/pages/Home.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import BottomNav from "./buttomnav";
@@ -25,9 +24,15 @@ type ExpenseDTO = {
     date: string;
     paymentMethod?: string | null;
     iconKey?: string | null;
+    occurredAt?: string | null;
 };
 
-type Account = { name: string; amount: number | string; iconKey?: string };
+type Account = {
+    id: number;
+    name: string;
+    amount: number;
+    iconKey?: string
+};
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
     bank: Building2,
@@ -50,23 +55,6 @@ function IconByKey({ name, size = 18 }: { name?: string | null; size?: number })
     return <Icon size={size} className="tx-icon" />;
 }
 
-function loadAccounts(): Account[] {
-    try {
-        const raw = localStorage.getItem("accounts");
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) return parsed;
-        }
-    } catch {}
-    return [
-        { name: "ไทยพาณิชย์", amount: 20000, iconKey: "bank" },
-        { name: "กสิกรไทย", amount: 20000, iconKey: "wallet" },
-    ];
-}
-function saveAccounts(list: Account[]) {
-    localStorage.setItem("accounts", JSON.stringify(list));
-}
-
 function formatTH(n: number) { return n.toLocaleString("th-TH"); }
 function pad2(n: number) { return String(n).padStart(2, "0"); }
 function monthRangeISO(year: number, month1to12: number) {
@@ -80,7 +68,6 @@ function signed(n: number, type: "EXPENSE" | "INCOME") {
     return type === "EXPENSE" ? -v : v;
 }
 
-/* ---- helpers: รองรับวันที่หลายรูปแบบ -> ISO ---- */
 function toISODate(anyDate: string): string {
     if (!anyDate) return new Date().toISOString().slice(0, 10);
     const s = anyDate.trim();
@@ -92,33 +79,30 @@ function toISODate(anyDate: string): string {
     return isNaN(dt.getTime()) ? new Date().toISOString().slice(0,10) : dt.toISOString().slice(0,10);
 }
 
-/* ---- ดึง recurring จาก localStorage เฉพาะช่วงเดือน ---- */
-function loadLocalRepeatedInRange(startISO: string, endISO: string): ExpenseDTO[] {
-    const startMs = +new Date(`${startISO}T00:00:00`);
-    const endMs = +new Date(`${endISO}T23:59:59`);
-    try {
-        const raw = localStorage.getItem("repeatedTransactions");
-        if (!raw) return [];
-        const arr = JSON.parse(raw);
-        if (!Array.isArray(arr)) return [];
-        return arr.flatMap((x: any) => {
-            const iso = toISODate(String(x.date || ""));
-            const ms = +new Date(`${iso}T00:00:00`);
-            if (isNaN(ms) || ms < startMs || ms > endMs) return [];
-            const amt = Math.abs(Number(x.amount || 0)) || 0;
-            return [{
-                id: Number(x.id) || Date.now(),
-                type: "EXPENSE",
-                category: String(x.name || "รายการ"),
-                amount: amt,
-                note: null,
-                place: null,
-                date: iso,
-                paymentMethod: undefined,
-                iconKey: "RefreshCw"
-            } as ExpenseDTO];
-        });
-    } catch { return []; }
+type ApiRepeatedTransaction = {
+    id: number;
+    name: string;
+    account: string;
+    amount: number;
+    date: string;
+    frequency: string;
+}
+
+function mapRepeatedToExpenseDTO(rt: ApiRepeatedTransaction): ExpenseDTO {
+    const amt = Number(rt.amount || 0);
+    const iso = toISODate(rt.date);
+    return {
+        id: rt.id,
+        type: "EXPENSE",
+        category: rt.name,
+        amount: Math.abs(isFinite(amt) ? amt : 0),
+        note: `(ซ้ำ: ${rt.frequency})`,
+        place: null,
+        date: iso,
+        occurredAt: null,
+        paymentMethod: rt.account,
+        iconKey: "RefreshCw"
+    }
 }
 
 export default function Home() {
@@ -126,17 +110,74 @@ export default function Home() {
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [openMenu, setOpenMenu] = useState<number | null>(null);
 
-    // ---------- โหลดบัญชี + ฟังอัปเดต ----------
-    useEffect(() => { setAccounts(loadAccounts()); }, []);
+    const fetchAccounts = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/accounts`, {
+                headers: { Accept: "application/json" },
+                credentials: "include",
+            });
+            if (!res.ok) {
+                if (res.status === 401) {
+                    navigate("/login");
+                }
+                throw new Error(`โหลดบัญชีไม่สำเร็จ (${res.status})`);
+            }
+            const data: Account[] = await res.json();
+            setAccounts(data);
+        } catch (e) {
+            console.error("Error fetching accounts:", e);
+        }
+    };
+
     useEffect(() => {
-        const reloadAcc = () => setAccounts(loadAccounts());
-        const onStorage = (e: StorageEvent) => { if (e.key === "accounts") reloadAcc(); };
-        window.addEventListener("accountsUpdated", reloadAcc);
-        window.addEventListener("storage", onStorage);
-        return () => {
-            window.removeEventListener("accountsUpdated", reloadAcc);
-            window.removeEventListener("storage", onStorage);
+        fetchAccounts();
+    }, []);
+
+    const [latestTransaction, setLatestTransaction] = useState<ExpenseDTO | null>(null);
+    const [latestLoading, setLatestLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchLatest = async () => {
+            try {
+                setLatestLoading(true);
+                const [resExpenses, resRepeated] = await Promise.all([
+                    fetch(`${API_BASE}/api/expenses`, {
+                        headers: { Accept: "application/json" },
+                        credentials: "include",
+                    }),
+                    fetch(`${API_BASE}/api/repeated-transactions`, {
+                        headers: { Accept: "application/json" },
+                        credentials: "include",
+                    })
+                ]);
+
+                if (!resExpenses.ok) throw new Error("Failed to load expenses");
+                if (!resRepeated.ok) throw new Error("Failed to load repeated tx");
+
+                const serverData: ExpenseDTO[] = await resExpenses.json();
+                const repeatedData: ApiRepeatedTransaction[] = await resRepeated.json();
+                const repeatedAsExpenses = repeatedData.map(mapRepeatedToExpenseDTO);
+
+                const allData = [...serverData, ...repeatedAsExpenses];
+
+                const sorted = allData.sort((a, b) => {
+                    const dateA = a.occurredAt || a.date;
+                    const dateB = b.occurredAt || b.date;
+                    if (!dateA) return 1;
+                    if (!dateB) return -1;
+                    return new Date(dateB).getTime() - new Date(dateA).getTime();
+                });
+
+                setLatestTransaction(sorted.length > 0 ? sorted[0] : null);
+            } catch (e) {
+                console.error("Failed to fetch latest transaction:", e);
+                setLatestTransaction(null);
+            } finally {
+                setLatestLoading(false);
+            }
         };
+
+        fetchLatest();
     }, []);
 
     useEffect(() => {
@@ -148,26 +189,36 @@ export default function Home() {
     }, [openMenu]);
 
     const totalAccounts = useMemo(
-        () =>
-            accounts.reduce((sum, a) => {
-                const num =
-                    typeof a.amount === "string" ? parseFloat(a.amount || "0") : Number(a.amount || 0);
-                return sum + (Number.isFinite(num) ? num : 0);
-            }, 0),
+        () => accounts.reduce((sum, a) => sum + (Number(a.amount) || 0), 0),
         [accounts]
     );
 
-    const handleDelete = (idx: number) => {
-        const acc = accounts[idx];
+    const handleDelete = async (id: number) => {
+        const acc = accounts.find(a => a.id === id);
+        if (!acc) return;
+
         if (!window.confirm(`ลบบัญชี “${acc.name}” ใช่ไหม?`)) return;
-        const next = accounts.filter((_, i) => i !== idx);
-        setAccounts(next);
-        saveAccounts(next);
+
+        try {
+            const res = await fetch(`${API_BASE}/api/accounts/${id}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+
+            if (res.ok) {
+                setAccounts(prev => prev.filter(a => a.id !== id));
+            } else {
+                const errorText = await res.text();
+                alert(`ลบไม่สำเร็จ: ${errorText}`);
+            }
+        } catch (e) {
+            alert(`เกิดข้อผิดพลาด: ${e}`);
+        }
         setOpenMenu(null);
     };
-    const handleEdit = (idx: number) => {
-        const acc = accounts[idx];
-        navigate("/accountnew", { state: { mode: "edit", index: idx, account: acc } });
+
+    const handleEdit = (account: Account) => {
+        navigate("/accountnew", { state: { mode: "edit", account: account } });
     };
 
     const today = new Date();
@@ -180,21 +231,40 @@ export default function Home() {
         loading: true, error: null as any, data: [] as ExpenseDTO[]
     });
 
-    // ---------- โหลดรายจ่าย/รายได้ของเดือน + รวม recurring (local) ----------
     const fetchMonth = async () => {
         try {
             setState((s) => ({ ...s, loading: true, error: null }));
             const { start, end } = monthRangeISO(year, month);
 
-            const res = await fetch(`${API_BASE}/api/expenses/range?start=${start}&end=${end}`, {
-                headers: { Accept: "application/json" },
-                credentials: "include",
-            });
-            if (!res.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (${res.status})`);
-            const serverData: ExpenseDTO[] = await res.json();
+            const [resExpenses, resRepeated] = await Promise.all([
+                fetch(`${API_BASE}/api/expenses/range?start=${start}&end=${end}`, {
+                    headers: { Accept: "application/json" },
+                    credentials: "include",
+                }),
+                fetch(`${API_BASE}/api/repeated-transactions`, {
+                    headers: { Accept: "application/json" },
+                    credentials: "include",
+                })
+            ]);
 
-            const localRepeated = loadLocalRepeatedInRange(start, end);
-            setState({ loading: false, error: null, data: [...serverData, ...localRepeated] });
+            if (!resExpenses.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (${resExpenses.status})`);
+            if (!resRepeated.ok) throw new Error(`โหลดรายการซ้ำไม่สำเร็จ (${resRepeated.status})`);
+
+            const serverData: ExpenseDTO[] = await resExpenses.json();
+            const allRepeatedData: ApiRepeatedTransaction[] = await resRepeated.json();
+
+            const startMs = +new Date(`${start}T00:00:00`);
+            const endMs = +new Date(`${end}T23:59:59`);
+
+            const filteredRepeated = allRepeatedData.filter(x => {
+                const iso = toISODate(String(x.date || ""));
+                const ms = +new Date(`${iso}T00:00:00`);
+                return !isNaN(ms) && ms >= startMs && ms <= endMs;
+            });
+
+            const repeatedAsExpenses = filteredRepeated.map(mapRepeatedToExpenseDTO);
+
+            setState({ loading: false, error: null, data: [...serverData, ...repeatedAsExpenses] });
         } catch (e: any) {
             setState({ loading: false, error: e?.message || "เกิดข้อผิดพลาด", data: [] });
         }
@@ -202,32 +272,17 @@ export default function Home() {
 
     useEffect(() => { fetchMonth(); }, [year, month]);
 
-    // ฟังการแก้ recurring (ทั้งแท็บเดียวกันและข้ามแท็บ)
-    useEffect(() => {
-        const reload = () => fetchMonth();
-        const onStorage = (e: StorageEvent) => { if (e.key === "repeatedTransactions") reload(); };
-        window.addEventListener("repeatedTransactionsUpdated", reload);
-        window.addEventListener("storage", onStorage);
-        return () => {
-            window.removeEventListener("repeatedTransactionsUpdated", reload);
-            window.removeEventListener("storage", onStorage);
-        };
-    }, []);
-
-    // ---------- คำนวณยอดเดือน + “ล่าสุด” ----------
-    const { monthIncome, monthExpense, monthBalance, recent } = useMemo(() => {
+    const { monthIncome, monthExpense, monthBalance } = useMemo(() => {
         const signedList = data.map((e) => ({
             ...e,
             _signed: signed(e.amount, e.type),
-            _dateMs: +new Date(toISODate(e.date)),
+            _dateMs: +new Date(toISODate(e.occurredAt || e.date)),
         }));
         const income = signedList.filter((x) => x._signed > 0).reduce((s, x) => s + x._signed, 0);
         const expenseAbs = signedList.filter((x) => x._signed < 0).reduce((s, x) => s + Math.abs(x._signed), 0);
         const balance = income - expenseAbs;
-        const last1 = [...signedList]
-            .sort((a, b) => (a._dateMs === b._dateMs ? b.id - a.id : b._dateMs - a._dateMs))
-            .slice(0, 1);
-        return { monthIncome: income, monthExpense: expenseAbs, monthBalance: balance, recent: last1 };
+
+        return { monthIncome: income, monthExpense: expenseAbs, monthBalance: balance };
     }, [data]);
 
     const walletBalance = useMemo(
@@ -281,16 +336,18 @@ export default function Home() {
                     <Link to="/summary" className="transaction-link">ดูทั้งหมด</Link>
                 </div>
 
-                {loading && <div className="transaction-empty">กำลังโหลดข้อมูล…</div>}
-                {error && !loading && <div className="transaction-empty neg">{String(error)}</div>}
-                {!loading && !error && recent.length === 0 && (
-                    <div className="transaction-empty">ยังไม่มีรายการในเดือนนี้</div>
+                {latestLoading && <div className="transaction-empty">กำลังโหลดข้อมูล…</div>}
+
+                {!latestLoading && !latestTransaction && (
+                    <div className="transaction-empty">ยังไม่มีรายการ</div>
                 )}
 
-                {!loading && !error && recent.map((tx) => {
+                {!latestLoading && latestTransaction && (() => {
+                    const tx = latestTransaction;
                     const amt = signed(tx.amount, tx.type);
                     const color = amt < 0 ? "#ef4444" : "#16a34a";
-                    const title = (tx.note && tx.note.trim() !== "") ? tx.note : (tx.category || "-");
+                    const title = tx.category || "-";
+
                     return (
                         <div className="transaction-item" key={tx.id}>
                             <div className="transaction-info">
@@ -307,23 +364,23 @@ export default function Home() {
               </span>
                         </div>
                     );
-                })}
+                })()}
+
 
                 <div className="category-grid">
-                    {accounts.map((acc, idx) => {
+                    {accounts.map((acc) => {
                         const Icon = ICON_MAP[acc.iconKey || "bank"] || Building2;
-                        const isOpen = openMenu === idx;
-                        const amt =
-                            typeof acc.amount === "string" ? parseFloat(acc.amount || "0") : Number(acc.amount || 0);
+                        const isOpen = openMenu === acc.id;
+                        const amt = Number(acc.amount) || 0;
 
                         return (
-                            <div className="category-card has-more" key={acc.name + idx}>
+                            <div className="category-card has-more" key={acc.id}>
                                 <button
                                     className="more-btn"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         e.preventDefault();
-                                        setOpenMenu((cur) => (cur === idx ? null : idx));
+                                        setOpenMenu((cur) => (cur === acc.id ? null : acc.id));
                                     }}
                                     aria-label="More actions"
                                 >
@@ -332,11 +389,11 @@ export default function Home() {
 
                                 {isOpen && (
                                     <div className="more-menu" onClick={(e) => e.stopPropagation()}>
-                                        <button className="more-item" onClick={() => handleEdit(idx)}>
+                                        <button className="more-item" onClick={() => handleEdit(acc)}>
                                             <Edit2 size={16} />
                                             <span>แก้ไข</span>
                                         </button>
-                                        <button className="more-item danger" onClick={() => handleDelete(idx)}>
+                                        <button className="more-item danger" onClick={() => handleDelete(acc.id)}>
                                             <Trash2 size={16} />
                                             <span>ลบ</span>
                                         </button>

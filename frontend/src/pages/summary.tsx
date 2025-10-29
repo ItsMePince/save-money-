@@ -1,10 +1,10 @@
-// src/pages/summary.tsx
 import React, { useEffect, useState } from "react";
 import {
     Utensils, X,
     Train, Wallet, CreditCard, Car, Bus, Bike,
     Coffee, Gift, Tag, ShoppingBag, ShoppingCart,
-    Home as HomeIcon, HeartPulse, Activity, Fuel, MapPin
+    Home as HomeIcon, HeartPulse, Activity, Fuel, MapPin,
+    RefreshCw
 } from "lucide-react";
 import "./summary.css";
 import BottomNav from "./buttomnav";
@@ -18,8 +18,8 @@ type ExpenseDTO = {
     amount: number;
     note?: string | null;
     place?: string | null;
-    date: string;              // YYYY-MM-DD (หลังจากเรา normalize)
     occurredAt?: string | null;
+    date?: string | null;
     paymentMethod?: string | null;
     iconKey?: string | null;
     userId?: number;
@@ -33,20 +33,20 @@ type Item = {
     iconKey?: string;
     title: string;
     tag: string;
-    amount: number;            // เซ็นต์แล้ว (+/-)
-    date?: string;             // dd/MM/yyyy (เพื่อแสดง)
-    isoDate: string;           // YYYY-MM-DD
+    amount: number;
+    date?: string;
+    isoDate: string;
     note?: string;
     account?: string;
     location?: string;
     type: "EXPENSE" | "INCOME";
-    datetimeLocal?: string;    // YYYY-MM-DDTHH:mm (ไว้โชว์เวลา)
+    datetimeLocal?: string;
 };
 
 type DayEntry = {
-    isoKey: string;            // YYYY-MM-DD
-    label: string;             // e.g. "พฤ. 10/10"
-    total: number;             // รวมทั้งวัน (signed)
+    isoKey: string;
+    label: string;
+    total: number;
     items: Item[];
 };
 
@@ -55,10 +55,10 @@ const API_BASE =
     (import.meta as any)?.env?.REACT_APP_API_BASE ||
     "http://localhost:8081";
 
-/* ---------------- Icons ---------------- */
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     Utensils, Train, Wallet, CreditCard, Car, Bus, Bike, Coffee, Gift, Tag,
-    ShoppingBag, ShoppingCart, Home: HomeIcon, HeartPulse, Activity, Fuel, MapPin
+    ShoppingBag, ShoppingCart, Home: HomeIcon, HeartPulse, Activity, Fuel, MapPin,
+    RefreshCw
 };
 
 const EN_ALIAS: Record<string, string> = {
@@ -144,7 +144,6 @@ function IconByKey({
     return <Icon size={size} />;
 }
 
-/* ---------------- Date helpers (รองรับหลายรูปแบบ) ---------------- */
 function pad2(n: number) { return n.toString().padStart(2, "0"); }
 
 function toISODate(anyDate: string): string {
@@ -152,28 +151,23 @@ function toISODate(anyDate: string): string {
 
     const s = anyDate.trim();
 
-    // already ISO YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-    // YYYY/MM/DD → YYYY-MM-DD
     if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) {
         const [y, m, d] = s.split("/");
         return `${y}-${m}-${d}`;
     }
 
-    // DD/MM/YYYY → YYYY-MM-DD
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
         const [d, m, y] = s.split("/");
         return `${y}-${m}-${d}`;
     }
 
-    // DD-MM-YYYY → YYYY-MM-DD
     if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
         const [d, m, y] = s.split("-");
         return `${y}-${m}-${d}`;
     }
 
-    // fallback
     const dt = new Date(s);
     if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
 
@@ -208,12 +202,21 @@ function signedAmountText(n: number) {
 function isoToLocalDatetime(iso?: string | null): string | undefined {
     if (!iso) return undefined;
     const d = new Date(iso);
-    if (isNaN(d.getTime())) return undefined;
+    if (isNaN(d.getTime())) {
+        const tryNoTZ = new Date(iso.replace(" ", "T"));
+        if (isNaN(tryNoTZ.getTime())) return undefined;
+        const yyyy = tryNoTZ.getFullYear();
+        const mm = String(tryNoTZ.getMonth() + 1).padStart(2, "0");
+        const dd = String(tryNoTZ.getDate()).padStart(2, "0");
+        const hh = String(tryNoTZ.getHours()).padStart(2, "0");
+        const mi = String(tryNoTZ.getMinutes()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    }
     const yyyy = d.getFullYear();
-    const mm = pad2(d.getMonth() + 1);
-    const dd = pad2(d.getDate());
-    const hh = pad2(d.getHours());
-    const mi = pad2(d.getMinutes());
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
 
@@ -244,19 +247,15 @@ function extractLocalDatetime(e: ExpenseDTO): string | undefined {
     return undefined;
 }
 
-/* ---------------- Transform ---------------- */
-function toDayEntries(list: ExpenseDTO[]): DayEntry[] {
-    const groups = new Map<string, Item[]>();
-
+function toDayEntries(list: ExpenseDTO[]) {
+    const groups = new Map<string, any[]>();
     for (const e of list) {
         const sign = e.type === "EXPENSE" ? -1 : 1;
         const signed = sign * Math.abs(Number(e.amount));
-
-        // ใช้วันที่แบบ ISO เสมอ (normalize ก่อน)
-        const isoDate = toISODate(e.date);
-        const d = parseIsoDateToLocal(isoDate);
-
-        const item: Item = {
+        const dtLocal = isoToLocalDatetime(e.occurredAt);
+        const isoDate = dtLocal ? dtLocal.slice(0, 10) : toISODate(e.date || "");
+        const d = dtLocal ? new Date(dtLocal.replace("T", " ")) : parseIsoDateToLocal(isoDate);
+        const item = {
             id: e.id,
             category: e.category,
             paymentMethod: e.paymentMethod || undefined,
@@ -270,59 +269,49 @@ function toDayEntries(list: ExpenseDTO[]): DayEntry[] {
             account: e.paymentMethod || undefined,
             location: e.place || undefined,
             type: e.type,
-            datetimeLocal: extractLocalDatetime({ ...e, date: isoDate })
+            datetimeLocal: dtLocal || undefined,
         };
-
         if (!groups.has(isoDate)) groups.set(isoDate, []);
         groups.get(isoDate)!.push(item);
     }
-
-    const entries: DayEntry[] = Array.from(groups.entries()).map(([key, items]) => {
+    const entries = Array.from(groups.entries()).map(([key, items]) => {
         const [y, m, d] = key.split("-").map(Number);
         const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
         const total = items.reduce((s, it) => s + it.amount, 0);
-        return { isoKey: key, label: dayLabel(dt), total, items };
+        const map = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+        const lbl = `${map[dt.getDay()]} ${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}`;
+        return { isoKey: key, label: lbl, total, items };
     });
-
-    // เรียงจากวันใหม่ไปเก่า
     entries.sort((a, b) => (a.isoKey < b.isoKey ? 1 : -1));
     return entries;
 }
 
-/* ---------- ดึง recurring จาก localStorage แล้ว map เป็น ExpenseDTO ---------- */
-function loadLocalRepeatedAsExpenses(): ExpenseDTO[] {
-    try {
-        const raw = localStorage.getItem("repeatedTransactions");
-        if (!raw) return [];
-        const arr = JSON.parse(raw);
-        if (!Array.isArray(arr)) return [];
+type ApiRepeatedTransaction = {
+    id: number;
+    name: string;
+    account: string;
+    amount: number;
+    date: string; // DD/MM/YYYY
+    frequency: string;
+}
 
-        // โครงสร้าง recurring: { id, name, date, amount }
-        return arr
-            .filter((x: any) => x && typeof x === "object")
-            .map((x: any) => {
-                const amt = Number(x.amount || 0);
-                const iso = toISODate(String(x.date || "")); // normalize
-
-                return {
-                    id: Number(x.id) || Date.now(),
-                    type: "EXPENSE",                                   // recurring ถือเป็นค่าใช้จ่าย
-                    category: String(x.name || "รายการ"),
-                    amount: Math.abs(isFinite(amt) ? amt : 0),
-                    note: null,
-                    place: null,
-                    date: iso,                                         // ใช้ ISO เสมอ
-                    occurredAt: null,
-                    paymentMethod: undefined,
-                    iconKey: undefined
-                } as ExpenseDTO;
-            });
-    } catch {
-        return [];
+function mapRepeatedToExpenseDTO(rt: ApiRepeatedTransaction): ExpenseDTO {
+    const amt = Number(rt.amount || 0);
+    const iso = toISODate(rt.date);
+    return {
+        id: rt.id,
+        type: "EXPENSE",
+        category: rt.name,
+        amount: Math.abs(isFinite(amt) ? amt : 0),
+        note: `(ซ้ำ: ${rt.frequency})`,
+        place: null,
+        date: iso,
+        occurredAt: null,
+        paymentMethod: rt.account,
+        iconKey: "RefreshCw"
     }
 }
 
-/* ---------------- Component ---------------- */
 type EditForm = {
     typeLabel: "ค่าใช้จ่าย" | "รายได้";
     category: string;
@@ -363,15 +352,26 @@ export default function Summary() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch(`${API_BASE}/api/expenses`, {
-                headers: { Accept: "application/json" },
-                credentials: "include",
-            });
-            if (!res.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (${res.status})`);
-            const serverData: ExpenseDTO[] = await res.json();
+            const [resExpenses, resRepeated] = await Promise.all([
+                fetch(`${API_BASE}/api/expenses`, {
+                    headers: { Accept: "application/json" },
+                    credentials: "include",
+                }),
+                fetch(`${API_BASE}/api/repeated-transactions`, {
+                    headers: { Accept: "application/json" },
+                    credentials: "include",
+                })
+            ]);
 
-            const localRepeated = loadLocalRepeatedAsExpenses();
-            const all = [...serverData, ...localRepeated];
+            if (!resExpenses.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (${resExpenses.status})`);
+            if (!resRepeated.ok) throw new Error(`โหลดรายการซ้ำไม่สำเร็จ (${resRepeated.status})`);
+
+            const serverData: ExpenseDTO[] = await resExpenses.json();
+            const repeatedData: ApiRepeatedTransaction[] = await resRepeated.json();
+
+            const repeatedAsExpenses = repeatedData.map(mapRepeatedToExpenseDTO);
+
+            const all = [...serverData, ...repeatedAsExpenses];
 
             setEntries(toDayEntries(all));
         } catch (e: any) {
@@ -383,11 +383,10 @@ export default function Summary() {
 
     useEffect(() => { loadExpenses(); }, []);
 
-    // ฟังเหตุการณ์เพื่อรีโหลดอัตโนมัติ (บันทึก recurring / อัปเดตบัญชี / แท็บอื่น)
     useEffect(() => {
         const reload = () => loadExpenses();
         const onStorage = (e: StorageEvent) => {
-            if (e.key === "repeatedTransactions" || e.key === "accounts") reload();
+            if (e.key === "accounts") reload();
         };
         window.addEventListener("accountsUpdated", reload);
         window.addEventListener("storage", onStorage);
@@ -398,33 +397,42 @@ export default function Summary() {
     }, []);
 
     const onEdit = (it: Item) => {
-        setForm(itemToForm(it));
-        setEditMode(true);
-        setSelected(it);
-        const f = itemToForm(it);
-        const route = f.typeLabel === "รายได้" ? "/income-edit" : "/expense-edit";
-        navigate(route, {
-            state: { mode: "edit", data: { ...f, id: it.id } },
-        });
+        const isRepeated = it.note?.includes("(ซ้ำ:");
+
+        if (isRepeated) {
+            navigate('/repeated-transactions', { state: { editId: it.id } });
+        } else {
+            setForm(itemToForm(it));
+            setEditMode(true);
+            setSelected(it);
+            const f = itemToForm(it);
+            const route = f.typeLabel === "รายได้" ? "/income-edit" : "/expense-edit";
+            navigate(route, {
+                state: { mode: "edit", data: { ...f, id: it.id } },
+            });
+        }
     };
 
-    const tryDeleteEndpoints = async (id: number) => {
-        const attempt = async (url: string, init: RequestInit) => {
-            const r = await fetch(url, init);
-            return r.ok;
-        };
-        if (await attempt(`${API_BASE}/api/expenses/${id}`, { method: "DELETE", credentials: "include", headers: { Accept: "application/json" } })) return true;
-        if (await attempt(`${API_BASE}/api/expenses/${id}?_method=DELETE`, { method: "POST", credentials: "include", headers: { Accept: "application/json" } })) return true;
-        if (await attempt(`${API_BASE}/api/expenses/delete/${id}`, { method: "POST", credentials: "include", headers: { Accept: "application/json" } })) return true;
-        if (await attempt(`${API_BASE}/api/expenses/${id}`, { method: "DELETE", credentials: "include" })) return true;
-        return false;
+    const tryDeleteEndpoints = async (id: number, note: string | undefined) => {
+        const isRepeated = note?.includes("(ซ้ำ:");
+
+        const url = isRepeated
+            ? `${API_BASE}/api/repeated-transactions/${id}`
+            : `${API_BASE}/api/expenses/${id}`;
+
+        const res = await fetch(url, {
+            method: "DELETE",
+            credentials: "include"
+        });
+
+        return res.ok;
     };
 
     const onDelete = async (it: Item) => {
         if (!window.confirm("ลบรายการนี้ใช่ไหม?")) return;
         try {
             setSaving(true);
-            const ok = await tryDeleteEndpoints(it.id);
+            const ok = await tryDeleteEndpoints(it.id, it.note);
             if (!ok) throw new Error("ลบไม่สำเร็จ");
             await loadExpenses();
             setSelected(null);
