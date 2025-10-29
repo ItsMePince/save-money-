@@ -1,0 +1,678 @@
+:root {
+  --mint: #02BEA3;
+  --text: #222;
+  --muted: #7a7a7a;
+  --bg: #ffffff;
+  --border: #D9D9D9;
+  --shadow: none;
+  --radius: 18px;
+}
+
+/* ===== MODAL ===== */
+.tax-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px;
+  z-index: 1000;
+  overscroll-behavior: contain;
+}
+
+.tax-modal {
+  width: 485px;
+  max-width: 92vw;
+  background: #FFFFFF;
+  border: 1px solid #D9D9D9;
+  border-radius: 24px;
+  box-shadow: none;
+  overflow: hidden;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Noto Sans";
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+}
+
+.tax-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 8px 18px;
+}
+
+.tax-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.tax-close-btn {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+/* ✅ body ของ modal: เลื่อนได้ แต่ไม่เห็น scrollbar */
+.tax-modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 18px 18px 18px;
+  background: #FFFFFF;
+  padding-bottom: 16px;
+
+  /* ซ่อน scrollbar */
+  -ms-overflow-style: none;   /* IE/Edge */
+  scrollbar-width: none;      /* Firefox */
+}
+
+.tax-modal-body::-webkit-scrollbar {
+  display: none;              /* Chrome / Safari / Edge */
+  width: 0;
+  height: 0;
+}
+
+/* ===== CARD & FIELDS ===== */
+.card {
+  background: #FFF !important;
+  border: none !important;
+  border-radius: 30px;
+  box-shadow: none !important;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.section-title {
+  font-weight: 800;
+  font-size: 16px;
+  margin-bottom: 16px;
+  color: var(--mint);
+  background: transparent;
+}
+
+.amount-field {
+  display: block;
+  padding-top: 8px;
+  padding-bottom: 24px;
+}
+
+.amount-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.amount-input {
+  width: 100%;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #D9D9D9;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 400;
+  outline: none;
+  background: #FFFFFF;
+  text-align: left;
+}
+
+.amount-input::placeholder {
+  color: #c5c5c5;
+  font-weight: 400;
+}
+
+.amount-input:focus {
+  border-color: #D9D9D9;
+  box-shadow: none;
+}
+
+/* ===== Select ===== */
+.select-wrap {
+  position: relative;
+}
+
+.select-input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #D9D9D9;
+  border-radius: 999px;
+  background: #fff;
+  padding: 0 40px 0 16px;
+  font-size: 14px;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23999' height='20' viewBox='0 0 20 20' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M5.516 7.548L10 12.032l4.484-4.484.707.707L10 13.446 4.809 8.255z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: #D9D9D9;
+  box-shadow: none;
+}
+
+/* ===== Checkbox / Radio ===== */
+.row-check,
+.row-radio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.rad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  color: #111;
+}
+
+/* ✅ ปุ่ม radio มีจุดตรงกลางพอดี */
+.rad input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #999;
+  background-color: #fff;
+  cursor: pointer;
+  margin: 0;
+  position: relative;
+  transition: border-color 0.15s ease;
+}
+
+.rad input[type="radio"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: transparent;
+  transform: translate(-50%, -50%);
+  transition: background-color 0.15s ease;
+}
+
+.rad input[type="radio"]:checked {
+  border-color: var(--mint);
+}
+
+.rad input[type="radio"]:checked::after {
+  background-color: var(--mint);
+}
+
+/* ระยะระหว่างปุ่มมี/ไม่มี */
+.row-radio {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+/* ===== Notes ===== */
+.info-note {
+  color: #02BEA3;
+  font-size: 12px;
+  margin: 6px 0 10px 0;
+}
+
+.note-deduct {
+  color: #02BEA3;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top:-6px;
+  margin-bottom: 10px;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* ===== Tooltip Popup ===== */
+.tip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+}
+
+.tip-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .35);
+}
+
+.tip-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 320px;
+  width: calc(100vw - 48px);
+  background: #fff;
+  color: #0f766e;
+  border-radius: 16px;
+  border: 1px solid #C7F1EB;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ===== Footer Buttons ===== */
+.footer-nav {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.btn-back,
+.btn-next {
+  flex: 1 1 0;
+  height: 40px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-back {
+  background: #fff;
+  color: #02BEA3;
+  border: 1px solid #02BEA3;
+}
+
+.btn-next {
+  background: #02BEA3;
+  color: #fff;
+  border: none;
+}
+
+.btn-next:disabled {
+  background: #B2DFD8;
+  cursor: not-allowed;
+}
+
+.chk {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* <-- ปรับระยะห่างได้ เช่น 4–8px */
+  font-size: 16px;
+}
+
+.chk input[type="checkbox"] {
+  transform: scale(1.1); /* ทำให้กล่องใหญ่ขึ้นเล็กน้อยถ้าต้องการ */
+  cursor: pointer;
+}
+
+
+/* ===== Dropdown สีเทาเวลาเลือก "กรุณากำหนดสถานะ" ===== */
+.select-input:has(option[value=""]:checked) {
+  color: #b6b6b6;
+}
+
+/* เส้นของขั้นที่ผ่านแล้วจะเป็นสีมิ้น */
+.-progress.passed::before {
+  border-top-color: #02BEA3;
+}
+
+/* 📱 หน้าจอเล็ก: ลดขนาด dot และช่องว่าง */
+@media (max-width: 420px) {
+
+    .hint-pill {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(2, 190, 163, .12);
+      color: #0f766e;
+      font-size: 12px;
+      line-height: 1.5;
+      border: 1px solid rgba(2, 190, 163, .25);
+    }
+    .sum-list{
+      list-style: none;        /* เอาจุด • ออก */
+      padding: 0;
+      margin: 0;
+    }
+
+    .sum-label{
+      font-size: 16px;
+      color: #222;
+      line-height: 1.5;
+    }
+
+    .sum-value{
+      min-width: 110px;
+      text-align: right;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .sum-unit{
+      width: 38px;
+      text-align: left;
+      color: #666;
+      font-size: 16px;
+    }
+
+    .sum-value.mint{ color: var(--mint); }
+    .sum-value.red { color: #ff3b30; }   /* ต้องจ่าย */
+    .sum-value.green{ color: #0ea5a1; }  /* ได้คืน */
+}
+
+.footer-nav {
+  display: flex;
+  justify-content: center;
+  gap: 16px; /* ระยะระหว่างปุ่ม */
+  margin-top: 24px;
+}
+
+.footer-nav .btn-back,
+.footer-nav .btn-next {
+  min-width: 130px;
+  height: 48px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.25s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ปุ่มย้อนกลับ (พื้นขาว ขอบมินต์) */
+.footer-nav .btn-back {
+  background: #fff;
+  color: var(--mint);
+  border: 1.5px solid var(--mint);
+}
+
+.footer-nav .btn-back:hover {
+  background: var(--mint);
+  color: #fff;
+}
+
+/* ปุ่มถัดไป/คำนวณ (พื้นมินต์ ตัวอักษรขาว) */
+.footer-nav .btn-next {
+  background: var(--mint);
+  color: #fff;
+  border: none;
+}
+
+.footer-nav .btn-next:hover {
+  opacity: 0.9;
+}
+
+/* Responsive */
+@media (max-width: 420px) {
+  .footer-nav {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .footer-nav .btn-back,
+  .footer-nav .btn-next {
+    width: 100%;
+  }
+}
+
+.sum-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sum-row {
+  display: grid;
+  grid-template-columns: 1fr 110px 40px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.sum-row.no-border {
+  border-bottom: none !important;
+}
+
+.sum-row--final {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 2px solid var(--mint);
+  border-bottom: none !important;  /*เอาเส้นเทาใต้แถวออก */
+}
+
+.sum-row:last-child {
+  border-bottom: none !important;
+}
+
+.sum-label {
+  font-size: 16px;
+  color: #222;
+  line-height: 1.6;
+}
+
+.sum-value {
+  text-align: right;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--mint);
+}
+
+.sum-unit {
+  text-align: right;
+  font-size: 16px;
+  color: #666;
+}
+
+.sum-value.red {
+  color: #ff3b30;
+}
+.sum-value.green {
+  color: #0ea5a1;
+}
+
+/* Footer Button */
+.footer-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;              /* ระยะห่างระหว่างปุ่ม */
+  margin-top: 24px;
+}
+
+/* ปุ่มพื้นฐานทั้งย้อนกลับและถัดไป */
+.footer-nav .btn-back,
+.footer-nav .btn-next {
+  flex: 1;
+  max-width: auto;       /* ✅ ความกว้างเท่ากัน */
+  height: 52px;           /* ✅ ความสูงเท่ากัน */
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ปุ่มย้อนกลับ (พื้นขาว ขอบมินต์) */
+.footer-nav .btn-back {
+  background: #fff;
+  color: var(--mint);
+  border: 1.5px solid var(--mint);
+}
+
+.footer-nav .btn-back:hover {
+  background: var(--mint);
+  color: #fff;
+}
+
+/* ปุ่มถัดไป/คำนวณ (พื้นมินต์ ตัวอักษรขาว) */
+.footer-nav .btn-next {
+  background: var(--mint);
+  color: #fff;
+  border: 1.5px solid var(--mint);
+}
+
+.footer-nav .btn-next:hover {
+  opacity: 0.9;
+}
+
+/* ปุ่มที่ disable */
+.footer-nav .btn-next:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 📱 Responsive */
+@media (max-width: 480px) {
+  .footer-nav {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .footer-nav .btn-back,
+  .footer-nav .btn-next {
+    width: 100%;
+    max-width: none;
+  }
+}
+.req-asterisk {
+  color: #EC221F;
+  font-weight: 600;
+  margin-left: 2px;
+}
+/* ===== WIZARD (NEW, CENTERED + EQUAL CONNECTOR) ===== */
+
+/* เผื่อใน :root ของคุณยังไม่มีตัวแปรนี้ */
+:root{
+  --mint: #02BEA3;
+  --white: #FFFFFF;
+  --text: #0f172a;
+  --line: #E2E8F0;     /* <-- เพิ่มตัวแปรสีเส้น */
+  --ring: rgba(2,190,163,.45);
+}
+
+/* ตั้งค่าเว้นระยะและขนาดที่เดียวด้วยตัวแปร */
+.wizard-progress{
+  --steps: 8;          /* จำนวนจุดทั้งหมด */
+  --dot: 28px;         /* เส้นผ่านศูนย์กลางจุด */
+  --gap: 30px;     /* ระยะห่างระหว่างจุด (สำคัญ) */
+  --pad: 6px;          /* เว้นปลายเส้นจากขอบจุดทั้งสองด้าน */
+
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* อยู่กึ่งกลาง */
+  gap: var(--gap);
+  margin: 12px 0 16px;
+  overflow: visible;
+  padding: 0;
+}
+
+.wizard-item{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: var(--dot);
+}
+
+/* จุด (ปุ่มกลม) */
+.wizard-dot{
+  position: relative;
+  z-index: 2;
+  width: var(--dot);
+  height: var(--dot);
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--white);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: box-shadow .2s, transform .08s, background-color .2s, color .2s, border-color .2s, opacity .2s;
+}
+
+.wizard-dot.is-visited{
+  background: var(--mint);
+  color: #00332C;
+  border-color: var(--mint);
+  cursor: pointer;
+}
+.wizard-dot.is-visited:hover{
+  box-shadow: 0 0 0 3px rgba(2,190,163,.15);
+  transform: translateY(-1px);
+}
+
+.wizard-dot.is-active{
+  background: var(--white);
+  color: var(--mint);
+  border-color: var(--mint);
+  box-shadow: 0 0 0 3px var(--ring), 0 0 0 1px var(--mint) inset;
+}
+
+.wizard-dot.is-disabled{
+  opacity:.7;
+  cursor: default;
+}
+
+/* เส้นเชื่อม: เว้นเท่ากันทั้งซ้าย-ขวา ด้วย --pad */
+.wizard-item .wizard-dot::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2px;
+  width: calc(var(--gap) - (2 * var(--pad)));   /* ยาวตามระยะห่าง */
+  left: calc(-1 * var(--gap) + var(--pad));
+  /* 🟢 เส้นจุดสีเทา (default) */
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--line) 0,
+    var(--line) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+.wizard-item:first-child .wizard-dot::before {
+  display: none;
+}
+
+/* สีเส้นเมื่อผ่านแล้ว/active */
+.wizard-item .wizard-dot.is-visited::before,
+.wizard-item .wizard-dot.is-active::before {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--mint) 0,
+    var(--mint) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* ซ่อน label ถ้ามี เพื่อให้พอดี 1 บรรทัด */
+.wizard-label{ display:none; }
+
+/* กันโดนตัดหัวด้วย stacking context */
+.wizard-progress{ isolation:isolate; z-index:10; }
+.wizard-item{ z-index:20; }
