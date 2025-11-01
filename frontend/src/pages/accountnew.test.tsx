@@ -1,145 +1,256 @@
 // src/pages/accountnew.test.tsx
-import React from "react";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import AccountNew from "./accountnew";
 
-// ---- mock useNavigate (vitest) ----
+// ---- Mocks ----
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual: any = await vi.importActual("react-router-dom");
-  return { ...actual, useNavigate: () => mockNavigate };
-});
+const mockUseLocation = vi.fn();
 
-beforeEach(() => {
-  localStorage.clear();
-  vi.clearAllMocks();
-  vi.spyOn(window, "alert").mockImplementation(() => {});
-});
+// mock react-router-dom hooks
+vi.mock("react-router-dom", () => ({
+    useNavigate: () => mockNavigate,
+    useLocation: () => mockUseLocation(),
+}));
 
-// ✅ helper: เลือก trigger ของ dropdown ให้ชัด (ไม่ปะทะกับ label)
-function getTypeDropdownTrigger(): HTMLElement {
-  // พยายามหา element ที่เป็น placeholder ก่อน
-  const all = screen.getAllByText(/ประเภท/i);
-  // เลือกตัวที่เป็น placeholder ถ้ามี
-  const placeholderEl = all.find((el) =>
-    el.classList?.contains("placeholder")
-  );
-  if (placeholderEl) return placeholderEl as HTMLElement;
+// mock BottomNav ให้เบา ๆ
+vi.mock("./buttomnav", () => ({
+    __esModule: true,
+    default: () => <div data-testid="bottom-nav" />,
+}));
 
-  // ถ้าไม่มี class ให้เลือกตัวถัดไป (โดยมากตัวแรกจะเป็น label, ตัวถัดไปคือ trigger)
-  if (all.length > 1) return all[1] as HTMLElement;
+// ---- Helpers ----
+const makeUser = () => userEvent.setup();
 
-  // fallback อย่างสุภาพ
-  return all[0] as HTMLElement;
+function mockFetchOk() {
+    (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue("OK"),
+        json: vi.fn().mockResolvedValue({}),
+    });
 }
 
-describe("AccountNew Page", () => {
-  it("แสดงหัวข้อ 'สร้างบัญชี' และปุ่มยืนยัน", () => {
-    render(
-      <MemoryRouter>
-        <AccountNew />
-      </MemoryRouter>
-    );
-    expect(screen.getByText(/สร้างบัญชี/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /ยืนยัน/i })).toBeInTheDocument();
-  });
+function mockFetchFail(msg = "Bad Request", status = 400) {
+    (global.fetch as any) = vi.fn().mockResolvedValue({
+        ok: false,
+        status,
+        text: vi.fn().mockResolvedValue(msg),
+    });
+}
 
-  it("กรอกไม่ครบ → alert error", () => {
-    render(
-      <MemoryRouter>
-        <AccountNew />
-      </MemoryRouter>
-    );
-    fireEvent.click(screen.getByRole("button", { name: /ยืนยัน/i }));
-    expect(window.alert).toHaveBeenCalledWith(
-      "กรอกข้อมูลให้ครบและจำนวนเงินให้ถูกต้องก่อนน้าา"
-    );
-  });
+function mockFetchReject(err = new Error("network")) {
+    (global.fetch as any) = vi.fn().mockRejectedValue(err);
+}
 
-  it("สามารถเลือกประเภทบัญชีและไอคอนได้", () => {
-    render(
-      <MemoryRouter>
-        <AccountNew />
-      </MemoryRouter>
-    );
+/** เลือกประเภทโดยหา “ปุ่มเปิดเมนูประเภท” จริง ๆ (button[aria-haspopup=listbox]) ภายในแถวที่มีข้อความ “ประเภทบัญชี” */
+const selectType = async (typeName: string, u = makeUser()) => {
+    const row =
+        screen.getByText("ประเภทบัญชี").closest(".row") ||
+        screen.getByText("ประเภทบัญชี").parentElement;
+    if (!row) throw new Error("ไม่พบแถว 'ประเภทบัญชี'");
+    const opener = row.querySelector<HTMLButtonElement>("button[aria-haspopup='listbox']");
+    if (!opener) throw new Error("ไม่พบปุ่มเปิดเมนูประเภท");
+    await u.click(opener);
+    await waitFor(() => expect(screen.getByRole("listbox")).toBeInTheDocument());
+    await u.click(screen.getByRole("option", { name: typeName }));
+};
 
-    // เปิด dropdown ประเภท (ใช้ helper เพื่อไม่ชน label)
-    const trigger = getTypeDropdownTrigger();
-    fireEvent.click(trigger);
+describe("AccountNew (API version)", () => {
+    let alertSpy: ReturnType<typeof vi.spyOn>;
 
-    // เลือก "ธนาคาร" จากรายการ
-    const dd = document.querySelector(".dropdown") as HTMLElement;
-    const bankOption = within(dd).getByText(/ธนาคาร/i);
-    fireEvent.click(bankOption);
+    beforeEach(() => {
+        vi.clearAllMocks();
 
-    // ข้อความที่เลือกต้องแสดงอยู่
-    expect(screen.getByText(/ธนาคาร/i)).toBeInTheDocument();
+        // ค่าเริ่มต้นเป็นหน้า Create
+        mockUseLocation.mockReturnValue({
+            state: undefined,
+            pathname: "/accounts/new",
+            search: "",
+            hash: "",
+            key: "k",
+        });
 
-    // เลือกไอคอน "กระปุก"
-    const piggyBtn = screen.getByRole("button", { name: /กระปุก/i });
-    fireEvent.click(piggyBtn);
-    expect(piggyBtn).toHaveClass("active");
-  });
-
-  // (ถ้าอยากเปิดเทสต์นี้อีกครั้ง ก็เอา .skip ออกได้เมื่อพร้อม)
-  it.skip("บันทึกบัญชีใหม่ลง localStorage และ navigate ไป /home (ไม่สนตัวพิมพ์)", async () => {
-    render(
-      <MemoryRouter>
-        <AccountNew />
-      </MemoryRouter>
-    );
-
-    fireEvent.change(screen.getByPlaceholderText(/ชื่อบัญชี/i), {
-      target: { value: "MyCash" },
+        // mock fetch & alert & rAF
+        (global.fetch as any) = vi.fn();
+        alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+        vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb: FrameRequestCallback) => {
+            cb(Date.now());
+            return 0;
+        });
     });
 
-    const trigger = getTypeDropdownTrigger();
-    fireEvent.click(trigger);
-
-    const dd = document.querySelector(".dropdown") as HTMLElement;
-    fireEvent.click(within(dd).getByText(/เงินสด/i));
-
-    fireEvent.change(screen.getByPlaceholderText(/บาท/i), {
-      target: { value: "1000" },
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /ยืนยัน/i }));
+    it("แสดงหน้า Create ได้ถูกต้อง และ format จำนวนเงินด้วย comma", () => {
+        render(<AccountNew />);
+        expect(screen.getByRole("heading", { name: "สร้างบัญชี" })).toBeInTheDocument();
 
-    await waitFor(() => {
-      const saved = JSON.parse(localStorage.getItem("accounts") || "[]");
-      expect(saved).toHaveLength(1);
-      expect(saved[0].name).toBe("MyCash");
-      expect(mockNavigate).toHaveBeenCalledWith(expect.stringMatching(/^\/home$/i));
+        const amount = screen.getByLabelText("จำนวนเงิน");
+        fireEvent.change(amount, { target: { value: "12,3a45x" } });
+        // rAF ถูก mock ให้ sync แล้ว
+        expect(amount).toHaveValue("12,345");
     });
-  });
 
-  it.skip("โหมดแก้ไข: โหลดค่ามาแก้ไขและ submit แล้วบันทึก", async () => {
-    const initAcc = { name: "Old", amount: 50, iconKey: "wallet", type: "เงินสด" };
-    localStorage.setItem("accounts", JSON.stringify([initAcc]));
-
-    render(
-      <MemoryRouter
-        initialEntries={[
-          { pathname: "/edit", state: { mode: "edit", index: 0, account: initAcc } } as any,
-        ]}
-      >
-        <AccountNew />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByDisplayValue("Old")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("50")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText(/ชื่อบัญชี/i), {
-      target: { value: "Updated" },
+    it("แจ้งเตือนเมื่อข้อมูลไม่ครบ แล้วไม่เรียก fetch", async () => {
+        const u = makeUser();
+        render(<AccountNew />);
+        await u.click(screen.getByRole("button", { name: "ยืนยัน" }));
+        expect(alertSpy).toHaveBeenCalled();
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(mockNavigate).not.toHaveBeenCalled();
     });
-    fireEvent.click(screen.getByRole("button", { name: /บันทึกการแก้ไข/i }));
 
-    await waitFor(() => {
-      const saved = JSON.parse(localStorage.getItem("accounts") || "[]");
-      expect(saved[0].name).toBe("Updated");
-      expect(mockNavigate).toHaveBeenCalledWith(expect.stringMatching(/^\/home$/i));
+    it("Create Mode: กรอกครบ → เรียก POST /api/accounts และ navigate('/home')", async () => {
+        const u = makeUser();
+        mockFetchOk();
+
+        render(<AccountNew />);
+
+        // กรอกชื่อ
+        await u.type(screen.getByPlaceholderText("ชื่อบัญชี"), "บัญชีออมทรัพย์");
+
+        // เลือกประเภท
+        await selectType("ธนาคาร", u);
+
+        // เลือกไอคอน 'กระปุก'
+        await u.click(screen.getByRole("button", { name: "กระปุก" }));
+
+        // ใส่จำนวนเงิน 5000 (จะถูกฟอร์แมตเป็น 5,000)
+        const amount = screen.getByLabelText("จำนวนเงิน");
+        fireEvent.change(amount, { target: { value: "5000" } });
+        await waitFor(() => expect(amount).toHaveValue("5,000"));
+
+        // submit
+        await u.click(screen.getByRole("button", { name: "ยืนยัน" }));
+
+        // ตรวจเรียก fetch
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalledTimes(1);
+            const [url, opts] = (global.fetch as any).mock.calls[0];
+            expect(url).toBe("http://localhost:8081/api/accounts");
+            expect(opts.method).toBe("POST");
+            expect(opts.credentials).toBe("include");
+            expect(opts.headers["Content-Type"]).toBe("application/json");
+            const parsed = JSON.parse(opts.body);
+            expect(parsed).toEqual({
+                name: "บัญชีออมทรัพย์",
+                type: "ธนาคาร",
+                amount: 5000,
+                iconKey: "piggy",
+            });
+        });
+
+        await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/home"));
     });
-  });
+
+    it("Edit Mode: preload ข้อมูลจาก state และส่ง PUT /api/accounts/{id}", async () => {
+        const u = makeUser();
+        mockFetchOk();
+
+        mockUseLocation.mockReturnValue({
+            state: {
+                mode: "edit",
+                account: { id: 99, name: "บัญชีเดิม", amount: 1000, iconKey: "wallet", type: "เงินสด" },
+            },
+            pathname: "/accounts/edit",
+            search: "",
+            hash: "",
+            key: "k",
+        });
+
+        render(<AccountNew />);
+
+        // preload ค่าต้องขึ้น
+        expect(screen.getByRole("heading", { name: "แก้ไขบัญชี" })).toBeInTheDocument();
+        expect(screen.getByPlaceholderText("ชื่อบัญชี")).toHaveValue("บัญชีเดิม");
+        expect(screen.getByLabelText("จำนวนเงิน")).toHaveValue("1,000");
+
+        // แก้ชื่อ & จำนวนเงิน & ไอคอน
+        await u.clear(screen.getByPlaceholderText("ชื่อบัญชี"));
+        await u.type(screen.getByPlaceholderText("ชื่อบัญชี"), "บัญชีที่แก้แล้ว");
+        fireEvent.change(screen.getByLabelText("จำนวนเงิน"), { target: { value: "888" } });
+        await u.click(screen.getByRole("button", { name: "กระเป๋าเงิน" })); // เปลี่ยนไอคอนเป็น wallet
+
+        await u.click(screen.getByRole("button", { name: "บันทึกการแก้ไข" }));
+
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalledTimes(1);
+            const [url, opts] = (global.fetch as any).mock.calls[0];
+            expect(url).toBe("http://localhost:8081/api/accounts/99");
+            expect(opts.method).toBe("PUT");
+            const parsed = JSON.parse(opts.body);
+            expect(parsed).toEqual({
+                name: "บัญชีที่แก้แล้ว",
+                type: "เงินสด",
+                amount: 888,
+                iconKey: "wallet",
+            });
+        });
+
+        await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/home"));
+    });
+
+    it("PUT โหมดแก้ไข: ถ้าไม่มี id ใน state → alert และไม่เรียก fetch", async () => {
+        const u = makeUser();
+
+        mockUseLocation.mockReturnValue({
+            state: {
+                mode: "edit",
+                account: { /* ไม่มี id */ name: "A", amount: 1000, iconKey: "wallet", type: "เงินสด" },
+            },
+            pathname: "/accounts/edit",
+            search: "",
+            hash: "",
+            key: "k",
+        });
+
+        render(<AccountNew />);
+
+        await u.click(screen.getByRole("button", { name: "บันทึกการแก้ไข" }));
+        expect(alertSpy).toHaveBeenCalled();
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("เมื่อ Backend ตอบ !ok → แสดงข้อความ error จาก response.text() และไม่ navigate", async () => {
+        const u = makeUser();
+        mockFetchFail("ชื่อบัญชีซ้ำ", 400);
+
+        render(<AccountNew />);
+
+        await u.type(screen.getByPlaceholderText("ชื่อบัญชี"), "บัญชีซ้ำ");
+        await selectType("เงินสด", u);
+        await u.click(screen.getByRole("button", { name: "กระปุก" }));
+        fireEvent.change(screen.getByLabelText("จำนวนเงิน"), { target: { value: "10" } });
+
+        await u.click(screen.getByRole("button", { name: "ยืนยัน" }));
+
+        await waitFor(() => {
+            expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining("บันทึกไม่สำเร็จ: "));
+        });
+        expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("เมื่อ fetch โยน exception (network error) → alert 'เชื่อมต่อเซิร์ฟเวอร์' และไม่ navigate", async () => {
+        const u = makeUser();
+        mockFetchReject(new Error("ECONNREFUSED"));
+
+        render(<AccountNew />);
+
+        await u.type(screen.getByPlaceholderText("ชื่อบัญชี"), "N");
+        await selectType("เงินสด", u);
+        await u.click(screen.getByRole("button", { name: "กระปุก" }));
+        fireEvent.change(screen.getByLabelText("จำนวนเงิน"), { target: { value: "10" } });
+
+        await u.click(screen.getByRole("button", { name: "ยืนยัน" }));
+
+        await waitFor(() =>
+            expect(alertSpy).toHaveBeenCalledWith("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์")
+        );
+        expect(mockNavigate).not.toHaveBeenCalled();
+    });
 });
