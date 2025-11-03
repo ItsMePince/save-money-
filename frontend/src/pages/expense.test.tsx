@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
-import Expense from "./Expense";
+import Expense from "./expense";
 
 // Mock dependencies
 const mockNavigate = vi.fn();

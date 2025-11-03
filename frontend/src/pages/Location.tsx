@@ -10,7 +10,7 @@ type Place = {
     distKm?: number;
 };
 
-const LONGDO_KEY = "bf881d6834afa68c0afa5137ac184dac";
+const LONGDO_KEY = "c9796919c8397d73141541b4ea9da5a4";
 
 function loadLongdo(): Promise<void> {
     return new Promise((resolve, reject) => {
