@@ -665,3 +665,21 @@
 }
 
 .tax-modal .wizard-label{ display:none; }
+
+/* === Mobile buttons: fit-content & centered === */
+@media (max-width: 480px) {
+    .tax-modal .footer-nav {
+        flex-direction: column;   /* เดิมโอเคแล้ว */
+        align-items: center;      /* จัดปุ่มให้อยู่กลาง */
+        gap: 10px;
+    }
+
+    .tax-modal .footer-nav .btn-back,
+    .tax-modal .footer-nav .btn-next {
+        flex: 0 0 auto;           /* เลิกยืดเต็มแถว */
+        width: auto;              /* กว้างตามเนื้อหา */
+        min-width: clamp(140px, 60vw, 260px); /* พอดีๆ ไม่เล็ก/ใหญ่เกิน */
+        padding: 0 18px;          /* เนื้อที่ซ้ายขวา */
+        height: 46px;             /* ลดสูงลงนิดให้ดูแน่นขึ้น */
+    }
+}
