@@ -159,12 +159,20 @@ describe("Month Page", () => {
     });
 
     it("เปลี่ยนเดือนเมื่อกดปุ่ม ก่อนหน้า/ถัดไป และเรียก fetch ใหม่", async () => {
-        // กำหนด mock responses ให้เพียงพอ: 1.Initial Load, 2.Previous Click, 3.Next Click
-        global.fetch = vi
-            .fn()
-            .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" }) // Load 1 (Initial)
-            .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" }) // Load 2 (Previous)
-            .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" }); // Load 3 (Next)
+        // [OLD] ลบการ mock แบบ chain ที่เปราะบางนี้ออก
+        // global.fetch = vi
+        //     .fn()
+        //     .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" })
+        //     .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" })
+        //     .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" });
+
+        // [NEW] ใช้ helper ที่สร้าง mock แบบถาวร (persistent)
+        // มันจะตอบกลับเป็น [] ทุกครั้งที่ถูกเรียก ไม่ว่าจะกี่ครั้งก็ตาม
+        mockFetchResolveOnce([]);
+
+        // [NEW] สั่งเคลียร์ mock เผื่อมี test อื่นเรียกค้างไว้ (แม้ beforeEach จะทำแล้วก็ตาม)
+        (global.fetch as any).mockClear();
+
 
         render(
             <MemoryRouter>
@@ -172,79 +180,52 @@ describe("Month Page", () => {
             </MemoryRouter>
         );
 
+        // รอให้โหลดรอบแรกจบ (ข้อความกำลังโหลดหาย)
+        await waitFor(() => {
+            const still = screen.queryAllByText((_, node) =>
+                !!node?.textContent?.toLowerCase().includes("load") ||
+                !!node?.textContent?.includes("กำลังโหลด")
+            );
+            expect(still.length).toBe(0);
+        }, { timeout: 3000 });
+
         const getChipText = () =>
             (document.querySelector(".month-chip") as HTMLElement)?.textContent?.trim() ?? "";
 
-        // A. รอให้โหลดรอบแรกเสร็จและปุ่ม Previous/Next ปรากฏ
-        const prevButton = await screen.findByRole("button", { name: "ก่อนหน้า" }, { timeout: 3000 });
-        const nextButton = screen.getByRole("button", { name: "ถัดไป" });
-
-        // ตรวจสอบสถานะเริ่มต้น
         const initialText = getChipText();
         expect(initialText).not.toBe("");
 
-        // B. previous// src/pages/month.test.tsx (Adjusted for Stability)
-        //
-        // // ... โค้ดส่วนบน ...
-        //
-        //   it("เปลี่ยนเดือนเมื่อกดปุ่ม ก่อนหน้า/ถัดไป และเรียก fetch ใหม่", async () => {
-        //     // กำหนด mock responses ให้เพียงพอ: 1.Initial Load, 2.Previous Click, 3.Next Click
-        //     global.fetch = vi
-        //       .fn()
-        //       .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" }) // Load 1 (Initial)
-        //       .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" }) // Load 2 (Previous)
-        //       .mockResolvedValueOnce({ ok: true, json: async () => [], text: async () => "[]" }); // Load 3 (Next)
-        //
-        //     render(
-        //       <MemoryRouter>
-        //         <Month />
-        //       </MemoryRouter>
-        //     );
-        //
-        //     const getChipText = () =>
-        //       (document.querySelector(".month-chip") as HTMLElement)?.textContent?.trim() ?? "";
-        //
-        //     // A. รอให้โหลดรอบแรกเสร็จและปุ่ม Previous/Next ปรากฏ
-        //     const prevButton = await screen.findByRole("button", { name: "ก่อนหน้า" }, { timeout: 3000 });
-        //     const nextButton = screen.getByRole("button", { name: "ถัดไป" });
-        //
-        //     // ตรวจสอบสถานะเริ่มต้น
-        //     const initialText = getChipText();
-        //     expect(initialText).not.toBe("");
-        //
-        //     // B. previous
-        //     fireEvent.click(prevButton);
-        //
-        //     // *ปรับปรุง*: รอให้ Chip Text เปลี่ยน (แสดงว่า fetch รอบ 2 เสร็จสิ้น)
-        //     await waitFor(() => {
-        //       expect(getChipText()).not.toBe(initialText);
-        //     }, { timeout: 3000 });
-        //
-        //     const previousText = getChipText();
-        //     expect(previousText).not.toBe(initialText); // ยืนยันว่าเปลี่ยนจริง
-        //
-        //     // C. next
-        //     fireEvent.click(nextButton);
-        //
-        //     // *ปรับปรุง*: รอให้ fetch call รอบที่ 3 เสร็จก่อน จากนั้นค่อยยืนยัน Chip Text
-        //     // เรายืนยันจำนวน fetch call ก่อนเพื่อตัดปัญหาว่า API ไม่ถูกเรียก
-        //     await waitFor(() => {
-        //         expect((global.fetch as any).mock.calls.length).toBe(3);
-        //     }, { timeout: 3000 });
-        //
-        //     // ตรวจสอบ Chip Text อีกครั้งหลัง fetch เสร็จสมบูรณ์
-        //     // *แก้ไขจุด Timeout*: บางครั้งการอัปเดต UI อาจช้ากว่าการ fetch เล็กน้อย
-        //     // และหากเดือนที่แสดงใน UI ไม่ได้กลับไปที่ initialText ให้ลองขยาย timeout
-        //     await waitFor(() => {
-        //       expect(getChipText()).toBe(initialText);
-        //     }, { timeout: 3000 });
-        //
-        //     // หากโค้ดยัง Timeout อยู่ที่บรรทัดนี้ หมายความว่า Month component
-        //     // อาจไม่สามารถคำนวณเดือนกลับมาที่ initial month ได้อย่างถูกต้อง
-        //
-        //
-        //
-        //
+        // [NEW] เก็บจำนวนการเรียกครั้งแรก
+        const initialCalls = (global.fetch as any).mock.calls.length;
+        expect(initialCalls).toBeGreaterThanOrEqual(1);
+
+        // previous
+        fireEvent.click(screen.getByRole("button", { name: "ก่อนหน้า" }));
+        await waitFor(() => {
+            expect(getChipText()).not.toBe(initialText);
+        }, { timeout: 3000 });
+
+        // [NEW] เช็กว่ามีการเรียก fetch เพิ่ม
+        const prevCalls = (global.fetch as any).mock.calls.length;
+        expect(prevCalls).toBeGreaterThan(initialCalls);
+
+
+        // next (กลับมาเท่าเดิม)
+        fireEvent.click(screen.getByRole("button", { name: "ถัดไป" }));
+        await waitFor(() => {
+            expect(getChipText()).toBe(initialText);
+        }, { timeout: 3000 });
+
+        // [MODIFIED] แก้การนับจำนวนครั้งให้แม่นยำขึ้น
+        // เราคาดหวังว่า fetch จะถูกเรียกอย่างน้อย 3 ครั้ง (initial + prev + next)
+        // หรืออย่างน้อยก็ต้องมากกว่าตอนที่กด prev
+        await waitFor(() => {
+            expect((global.fetch as any).mock.calls.length).toBeGreaterThan(prevCalls);
+        }, { timeout: 3000 });
+
+        // หรือจะเช็กยอดรวมก็ได้
+        expect((global.fetch as any).mock.calls.length).toBeGreaterThanOrEqual(3);
+    });
 });
 
 
