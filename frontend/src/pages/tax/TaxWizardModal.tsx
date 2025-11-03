@@ -218,7 +218,7 @@ export default function TaxWizardModal({ isOpen, onClose }: Props) {
                 return (
                     <OtherFundsStep
                         values={otherFunds}
-                        setValues={(p) => setOtherFunds((v) => ({ ...v, ...p }))}
+                        setValues={(p) => setOtherFunds((v: any) => ({ ...v, ...p }))}
                         onBack={() => setStep(4)}
                         onNext={() => goNext(6, 5)}
                     />
@@ -227,7 +227,7 @@ export default function TaxWizardModal({ isOpen, onClose }: Props) {
                 return (
                     <DonationStep
                         values={donation}
-                        setValues={(p) => setDonation((v) => ({ ...v, ...p }))}
+                        setValues={(p) => setDonation((v: any) => ({ ...v, ...p }))}
                         onBack={() => setStep(5)}
                         onNext={() => goNext(7, 6)}
                     />
@@ -236,7 +236,7 @@ export default function TaxWizardModal({ isOpen, onClose }: Props) {
                 return (
                     <WithheldStep
                         values={withheld}
-                        setValues={(p) => setWithheld((v) => ({ ...v, ...p }))}
+                        setValues={(p) => setWithheld((v: any) => ({ ...v, ...p }))}
                         onBack={() => setStep(6)}
                         onCalculate={handleCalculate} // ✅ ไปหน้า 8
                     />
