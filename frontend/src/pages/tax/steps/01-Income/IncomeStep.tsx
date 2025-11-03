@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import AmountInput from "../../shared/AmountInput";
 import FooterNav from "../../shared/FooterNav";
 
-type Props = {
+export type Props = {
   values: {
     salaryPerMonth?: string;
     bonusPerYear?: string;

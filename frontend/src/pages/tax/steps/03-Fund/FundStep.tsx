@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import AmountInput from "../../shared/AmountInput";
 import FooterNav from "../../shared/FooterNav";
 
-type Props = {
+export type Props = {
   values: {
     pvdPerYear?: string;              // กองทุนสำรองเลี้ยงชีพ (PVD)
     socialSecurityPerYear?: string;   // เบี้ยประกันสังคม
