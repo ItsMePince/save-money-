@@ -1,5 +1,6 @@
 .more-wrap {
-    min-height: 100dvh;
+    /* min-height: 100dvh; */  /* <-- ⚠️ บรรทัดนี้ถูกปิดไปแล้ว (นี่คือตัวแก้) */
+
     /* space for your global header & bottom nav rendered by App */
     padding: calc(30px + env(safe-area-inset-top, 0px)) 18px
     calc(110px + env(safe-area-inset-bottom, 0px));
