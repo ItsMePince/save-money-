@@ -267,7 +267,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-        {/* เพิ่ม: Recurring Transactions Route */}
+         เพิ่ม: Recurring Transactions Route
         <Route
           path="/recurring"
           element={

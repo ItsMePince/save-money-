@@ -124,14 +124,36 @@ export default function Income() {
         }
     }, [location.state, navigate]);
 
+    /**
+     * @description ทำความสะอาดและจำกัดตัวเลขทศนิยมไม่เกิน 2 ตำแหน่ง
+     */
     const sanitizeAmount = (raw: string) => {
-        let v = raw.replace(/[^\d.]/g, "");
+        let v = raw.replace(/[^\d.]/g, ""); // ลบอักขระที่ไม่ใช่ตัวเลขหรือจุดทศนิยม
+
+        // 1. จัดการจุดทศนิยมซ้ำซ้อน
         const parts = v.split(".");
-        if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
-        if (v.startsWith("0") && !v.startsWith("0.")) v = String(parseInt(v || "0", 10));
+        if (parts.length > 2) {
+            v = parts[0] + "." + parts.slice(1).join("");
+        }
+
+        // 2. จัดการเลขศูนย์นำหน้า (ยกเว้น 0.)
+        if (v.length > 1 && v.startsWith("0") && !v.startsWith("0.")) {
+            v = String(parseInt(v || "0", 10));
+        }
+
+        // 3. จำกัดทศนิยมไม่เกิน 2 ตำแหน่ง
+        if (v.includes(".")) {
+            const decimalPart = v.split(".")[1];
+            if (decimalPart.length > 2) {
+                // ตัดส่วนเกินออกให้เหลือแค่ 2 ตำแหน่ง
+                v = v.split(".")[0] + "." + decimalPart.slice(0, 2);
+            }
+        }
+
         if (v === "" || v === ".") v = "0";
         return v;
     };
+
     const onAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const v = sanitizeAmount(e.target.value);
         setAmount(v);
@@ -141,9 +163,22 @@ export default function Income() {
     const pad = useMemo(() => ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"], []);
     const onTapKey = (k: string) => {
         let next = amount;
-        if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0, -1);
-        else if (k === ".") next = next.includes(".") ? next : next + ".";
-        else next = next === "0" ? k : next + k;
+
+        if (k === "⌫") {
+            next = next.length <= 1 ? "0" : next.slice(0, -1);
+        } else if (k === ".") {
+            next = next.includes(".") ? next : next + ".";
+        } else {
+            // ตรวจสอบว่าถ้ามีจุดทศนิยมอยู่แล้ว และมี 2 หลักแล้ว จะไม่เพิ่มตัวเลขอีก
+            if (next.includes(".")) {
+                const decimalPart = next.split(".")[1];
+                if (decimalPart.length >= 2) return;
+            }
+            next = next === "0" ? k : next + k;
+        }
+
+        // ใช้ sanitizeAmount อีกครั้งเพื่อยืนยันความถูกต้อง
+        next = sanitizeAmount(next);
         setAmount(next);
         saveDraft({ amount: next });
     };
@@ -305,7 +340,7 @@ export default function Income() {
                     style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", position: "relative" }}
                 >
                     <CalendarDays className="icon" size={18} />
-                    <span>{dt ? `${dt.split("T")[0].split("-").reverse().join("/") } ${dt.split("T")[1]} น.` : "วัน / เดือน / ปี เวลา"}</span>
+                    <span>{dt ? formatDateTimeThai(dt) : "วัน / เดือน / ปี เวลา"}</span>
 
                     <input
                         ref={dtRef}
@@ -348,7 +383,7 @@ export default function Income() {
 
             <div className="keypad">
                 {pad.map((k, i) => (
-                    <button key={i} className={`key ${k === "⌫" ? "danger" : ""}`} onClick={() => (k === "⌫" ? onTapKey("⌫") : onTapKey(k))}>
+                    <button key={i} className={`key ${k === "⌫" ? "danger" : ""}`} onClick={() => onTapKey(k)}>
                         {k === "⌫" ? <IconBackspace /> : k}
                     </button>
                 ))}

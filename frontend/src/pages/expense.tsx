@@ -50,10 +50,10 @@ const customIconByKey: Record<string, React.FC<any>> = {
     stethoscope: Stethoscope, heart: HeartPulse, activity: Activity,
     pill: Pill, hospital: Hospital, ambulance: Ambulance,
     cart: ShoppingCart, bag: ShoppingBag, gift: Gift, tag: Tag, shirt: Shirt, creditcard: CreditCard, soap: SoapDispenserDroplet,
-    briefcase: Briefcase, laptop: Laptop, calculator: Calculator, barchart: BarChart, coins: Coins, wallet: Wallet,
+    briefcase: Briefcase, laptop: Laptop, calculator: BarChart, barchart: BarChart, coins: Coins, wallet: Wallet,
     book: BookOpen, graduation: GraduationCap, pencil: Pencil,
     dumbbell: Dumbbell, goal: Goal, trophy: Trophy, volleyball: Volleyball,
-    dog: Dog, cat: Cat, fish: Bird,
+    dog: Dog, cat: Cat, fish: Bird, bird: Bird,
     home: Home, sofa: Sofa, bed: Bed, wrench: Wrench, hammer: Hammer,
     game: Gamepad, music: Music, film: Film, popcorn: Popcorn, clapper: Clapperboard, sprout: Sprout,
     more: ({ active = false }: { active?: boolean }) => (
@@ -102,7 +102,7 @@ export default function Expense() {
     const [amount, setAmount]   = useState<string>(() => draft.amount ?? "0");
     const [note, setNote]       = useState<string>(() => draft.note ?? "");
     const [place, setPlace]     = useState<string>(() => draft.place ?? "");
-    const [dt, setDt]           = useState<string>(() => draft.dt ?? getNowLocalDT());
+    const [dt, setDt]           = useState<string>(() => getNowLocalDT());
 
     const [hydrated, setHydrated] = useState(false);
     useEffect(() => { setHydrated(true); }, []);
@@ -159,23 +159,59 @@ export default function Expense() {
         else { el.click(); el.focus(); }
     };
 
-    const pad = useMemo(() => ["1","2","3","4","5","6","7","8","9",".","0","⌫"], []);
-    const onTapKey = (k: string) => {
-        let next = amount;
-        if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0,-1);
-        else if (k === ".") next = next.includes(".") ? next : next + ".";
-        else next = next === "0" ? k : next + k;
-        setAmount(next);
-        saveDraft({ amount: next });
-    };
+    /**
+     * @description ทำความสะอาดและจำกัดตัวเลขทศนิยมไม่เกิน 2 ตำแหน่ง
+     */
     const sanitizeAmount = (raw: string) => {
-        let v = raw.replace(/[^\d.]/g, "");
+        let v = raw.replace(/[^\d.]/g, ""); // ลบอักขระที่ไม่ใช่ตัวเลขหรือจุดทศนิยม
+
+        // 1. จัดการจุดทศนิยมซ้ำซ้อน
         const parts = v.split(".");
-        if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
-        if (v.startsWith("0") && !v.startsWith("0.")) v = String(parseInt(v || "0", 10));
+        if (parts.length > 2) {
+            v = parts[0] + "." + parts.slice(1).join("");
+        }
+
+        // 2. จัดการเลขศูนย์นำหน้า (ยกเว้น 0.)
+        if (v.length > 1 && v.startsWith("0") && !v.startsWith("0.")) {
+            v = String(parseInt(v || "0", 10));
+        }
+
+        // 3. จำกัดทศนิยมไม่เกิน 2 ตำแหน่ง
+        if (v.includes(".")) {
+            const decimalPart = v.split(".")[1];
+            if (decimalPart.length > 2) {
+                // ตัดส่วนเกินออกให้เหลือแค่ 2 ตำแหน่ง
+                v = v.split(".")[0] + "." + decimalPart.slice(0, 2);
+            }
+        }
+
         if (v === "" || v === ".") v = "0";
         return v;
     };
+
+    const pad = useMemo(() => ["1","2","3","4","5","6","7","8","9",".","0","⌫"], []);
+    const onTapKey = (k: string) => {
+        let next = amount;
+
+        if (k === "⌫") {
+            next = next.length <= 1 ? "0" : next.slice(0,-1);
+        } else if (k === ".") {
+            next = next.includes(".") ? next : next + ".";
+        } else {
+            // ตรวจสอบว่าถ้ามีจุดทศนิยมอยู่แล้ว และมี 2 หลักแล้ว จะไม่เพิ่มตัวเลขอีก
+            if (next.includes(".")) {
+                const decimalPart = next.split(".")[1];
+                if (decimalPart.length >= 2) return;
+            }
+            next = next === "0" ? k : next + k;
+        }
+
+        // ใช้ sanitizeAmount อีกครั้งเพื่อยืนยันความถูกต้อง
+        next = sanitizeAmount(next);
+        setAmount(next);
+        saveDraft({ amount: next });
+    };
+
     const onAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const v = sanitizeAmount(e.target.value);
         setAmount(v);

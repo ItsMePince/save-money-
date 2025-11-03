@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import Income from "./Income";
+import Income from "./income";
 import { BrowserRouter as Router } from "react-router-dom";
 
 // Mock navigate and location
