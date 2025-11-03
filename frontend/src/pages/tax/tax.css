@@ -683,3 +683,19 @@
         height: 46px;             /* ลดสูงลงนิดให้ดูแน่นขึ้น */
     }
 }
+/* ช่องที่ไม่ผ่าน (ห่อด้วย .field-invalid) */
+.tax-modal .field-invalid .amount-input {
+    border-color: #EC221F !important;
+    box-shadow: 0 0 0 2px rgba(236,34,31,.12);
+}
+
+.tax-modal .field-invalid .amount-input::placeholder {
+    color: #ef9a9a; /* โทนแดงอ่อน อ่านง่าย */
+}
+
+/* ถ้า AmountInput มี label เป็น .amount-label ให้ไฮไลต์ด้วย */
+.tax-modal .field-invalid .amount-label,
+.tax-modal .field-invalid .req-asterisk {
+    color: #EC221F;
+}
+
