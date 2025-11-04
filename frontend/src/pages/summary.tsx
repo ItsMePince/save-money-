@@ -10,21 +10,7 @@ import "./summary.css";
 import BottomNav from "./buttomnav";
 import "./buttomnav.css";
 import { useNavigate } from "react-router-dom";
-
-type ExpenseDTO = {
-    id: number;
-    type: "EXPENSE" | "INCOME";
-    category: string;
-    amount: number;
-    note?: string | null;
-    place?: string | null;
-    occurredAt?: string | null;
-    date?: string | null;
-    paymentMethod?: string | null;
-    iconKey?: string | null;
-    userId?: number;
-    username?: string;
-} & Record<string, any>;
+import { fetchAllTransactions, ExpenseDTO } from "../lib/api";
 
 type Item = {
     id: number;
@@ -49,11 +35,6 @@ type DayEntry = {
     total: number;
     items: Item[];
 };
-
-const API_BASE =
-    (import.meta as any)?.env?.VITE_API_BASE ||
-    (import.meta as any)?.env?.REACT_APP_API_BASE ||
-    "http://localhost:8081";
 
 const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     Utensils, Train, Wallet, CreditCard, Car, Bus, Bike, Coffee, Gift, Tag,
@@ -286,32 +267,6 @@ function toDayEntries(list: ExpenseDTO[]) {
     return entries;
 }
 
-type ApiRepeatedTransaction = {
-    id: number;
-    name: string;
-    account: string;
-    amount: number;
-    date: string; // DD/MM/YYYY
-    frequency: string;
-}
-
-function mapRepeatedToExpenseDTO(rt: ApiRepeatedTransaction): ExpenseDTO {
-    const amt = Number(rt.amount || 0);
-    const iso = toISODate(rt.date);
-    return {
-        id: rt.id,
-        type: "EXPENSE",
-        category: rt.name,
-        amount: Math.abs(isFinite(amt) ? amt : 0),
-        note: `(ซ้ำ: ${rt.frequency})`,
-        place: null,
-        date: iso,
-        occurredAt: null,
-        paymentMethod: rt.account,
-        iconKey: "RefreshCw"
-    }
-}
-
 type EditForm = {
     typeLabel: "ค่าใช้จ่าย" | "รายได้";
     category: string;
@@ -352,28 +307,8 @@ export default function Summary() {
         setLoading(true);
         setError(null);
         try {
-            const [resExpenses, resRepeated] = await Promise.all([
-                fetch(`${API_BASE}/api/expenses`, {
-                    headers: { Accept: "application/json" },
-                    credentials: "include",
-                }),
-                fetch(`${API_BASE}/api/repeated-transactions`, {
-                    headers: { Accept: "application/json" },
-                    credentials: "include",
-                })
-            ]);
-
-            if (!resExpenses.ok) throw new Error(`โหลดข้อมูลไม่สำเร็จ (${resExpenses.status})`);
-            if (!resRepeated.ok) throw new Error(`โหลดรายการซ้ำไม่สำเร็จ (${resRepeated.status})`);
-
-            const serverData: ExpenseDTO[] = await resExpenses.json();
-            const repeatedData: ApiRepeatedTransaction[] = await resRepeated.json();
-
-            const repeatedAsExpenses = repeatedData.map(mapRepeatedToExpenseDTO);
-
-            const all = [...serverData, ...repeatedAsExpenses];
-
-            setEntries(toDayEntries(all));
+            const allTransactions = await fetchAllTransactions();
+            setEntries(toDayEntries(allTransactions));
         } catch (e: any) {
             setError(e?.message || "เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
         } finally {
@@ -415,6 +350,11 @@ export default function Summary() {
 
     const tryDeleteEndpoints = async (id: number, note: string | undefined) => {
         const isRepeated = note?.includes("(ซ้ำ:");
+
+        const API_BASE =
+            (import.meta as any)?.env?.VITE_API_BASE ||
+            (import.meta as any)?.env?.REACT_APP_API_BASE ||
+            "http://localhost:8081";
 
         const url = isRepeated
             ? `${API_BASE}/api/repeated-transactions/${id}`
