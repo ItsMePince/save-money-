@@ -1,10 +1,9 @@
-// src/pages/more.tsx
 import React, { useMemo, useState } from "react";
 import "./more.css";
 import { RefreshCw, Banknote, FileSpreadsheet, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { downloadCsvFile } from "../lib/csv";
-import { getExpensesForRange } from "../lib/offlineStore";
+import { fetchAllTransactions, ExpenseDTO } from "../lib/api";
 
 const DEFAULT_RANGE: "all" | "month" | "day" = "all";
 
@@ -23,19 +22,32 @@ export default function More() {
     async function handleExportOffline() {
         try {
             setDownloading(true);
-            const items = await getExpensesForRange(DEFAULT_RANGE, new Date());
-            const rows = items.map((x: any) => ({
-                วันที่: x.date ?? (x.occurredAt ? x.occurredAt.slice(0, 10) : ""),
+
+            const items: ExpenseDTO[] = await fetchAllTransactions();
+
+            if (!Array.isArray(items) || items.length === 0) {
+                alert("ไม่พบข้อมูลที่จะ Export 🤷‍♀️");
+                console.warn("fetchAllTransactions returned empty or invalid data.");
+                return;
+            }
+
+            const rows = items.map((x) => ({
+                // --- ⬇️ แก้ไขบรรทัดนี้ ---
+                วันที่: x.date ?? x.occurredAt ?? "", // เอา .slice(0, 10) ออก
+                // --- ⬆️ สิ้นสุดการแก้ไข ---
                 ประเภท: x.category ?? "",
-                จำนวนเงิน: x.amount ?? 0,
+                จำนวนเงิน: x.type === "EXPENSE" ? -Math.abs(x.amount) : Math.abs(x.amount),
                 โน้ต: x.note ?? "",
                 สถานที่: x.place ?? "",
                 การชำระเงิน: x.paymentMethod ?? "",
                 ประเภทบันทึก: x.type ?? "EXPENSE",
             }));
-            downloadCsvFile(`expenses-${DEFAULT_RANGE}.csv`, rows);
+
+            downloadCsvFile(`expenses-export-${new Date().toISOString().slice(0,10)}.csv`, rows);
+
         } catch (e) {
-            alert("Export ออฟไลน์ไม่สำเร็จ ❌");
+            console.error("Export failed:", e);
+            alert("Export ข้อมูลไม่สำเร็จ ❌ (ไม่สามารถเชื่อมต่อ API ได้)");
         } finally {
             setDownloading(false);
         }
