@@ -1,229 +1,179 @@
-// src/pages/CustomOutcome.tsx
+// src/pages/customoutcome.tsx
 // @ts-nocheck
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useMemo, useState } from "react";
 import "./customoutcome.css";
 import {
-  Check,
-  // Food & Drink
-  Utensils, Pizza, Drumstick, Coffee, Beer, CupSoda, IceCream, Candy, Cake,
-  // Travel
-  Car, Bus, Bike, Plane, Train, Ship, Fuel, Map, MapPin,
-  // Health
-  Stethoscope, HeartPulse, Activity, Pill, Hospital, Ambulance,
-  // Shopping / Style
-  ShoppingCart, ShoppingBag, Gift, Tag, Shirt, CreditCard, SoapDispenserDroplet,
-  // Work & Finance
-  Briefcase, Laptop, Calculator, BarChart, Coins, Wallet,
-  // Learning
-  BookOpen, GraduationCap, Pencil,
-  // Sports
-  Dumbbell, Goal, Trophy, Volleyball,
-  // Pets
-  Dog, Cat, Fish, Bird,
-  // Home / Family
-  Home, Sofa, Bed, Wrench, Hammer,
-  // Entertainment / Relax
-  Gamepad, Music, Film, Popcorn, Clapperboard, Sprout, Search
+    Check, Search,
+    Utensils, Coffee,ChevronLeft, ShoppingCart, ShoppingBag, Tag,
+    Bus, Train, Car, Fuel, Home, HeartPulse, CreditCard, Wallet, MapPin,
+    Beer, Pizza, Shirt, Gamepad2, PawPrint, Dumbbell, Book, Sofa, Wrench,
+    Briefcase, Scissors, Smartphone, Tv, WashingMachine, Globe
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import BottomNav from "./buttomnav";
-import { useTempCategory } from "../TempCategoryContext";
 
 type LucideIcon = React.ComponentType<{ className?: string }>;
-type IconItem = { key: string; label: string; Icon: LucideIcon };
+type IconItem = { key: string; label: string; Icon: LucideIcon; iconName: string };
 
-const ICON_SETS: Record<string, IconItem[]> = {
-  "อาหาร & เครื่องดื่ม": [
-    { key: "food", label: "อาหาร", Icon: Utensils },
-    { key: "pizza", label: "พิซซ่า", Icon: Pizza },
-    { key: "drumstick", label: "ไก่ทอด", Icon: Drumstick },
-    { key: "coffee", label: "กาแฟ", Icon: Coffee },
-    { key: "beer", label: "เบียร์", Icon: Beer },
-    { key: "cupsoda", label: "โซดา", Icon: CupSoda },
-    { key: "icecream", label: "ไอศกรีม", Icon: IceCream },
-    { key: "candy", label: "ขนม", Icon: Candy },
-    { key: "cake", label: "เค้ก", Icon: Cake },
-  ],
-  "การเดินทาง": [
-    { key: "car", label: "รถยนต์", Icon: Car },
-    { key: "bus", label: "รถบัส", Icon: Bus },
-    { key: "bike", label: "จักรยาน", Icon: Bike },
-    { key: "plane", label: "เครื่องบิน", Icon: Plane },
-    { key: "train", label: "รถไฟ", Icon: Train },
-    { key: "ship", label: "เรือ", Icon: Ship },
-    { key: "fuel", label: "น้ำมัน", Icon: Fuel },
-    { key: "map", label: "แผนที่", Icon: Map },
-    { key: "mappin", label: "ปักหมุด", Icon: MapPin },
-  ],
-  "สุขภาพ & การแพทย์": [
-    { key: "stethoscope", label: "หมอ", Icon: Stethoscope },
-    { key: "heart", label: "สุขภาพ", Icon: HeartPulse },
-    { key: "activity", label: "ออกกำลัง", Icon: Activity },
-    { key: "pill", label: "ยา", Icon: Pill },
-    { key: "hospital", label: "โรงพยาบาล", Icon: Hospital },
-    { key: "ambulance", label: "ปฐมพยาบาล", Icon: Ambulance },
-  ],
-  "เสื้อผ้า & ช้อปปิ้ง": [
-    { key: "cart", label: "ช้อปปิ้ง", Icon: ShoppingCart },
-    { key: "bag", label: "กระเป๋า", Icon: ShoppingBag },
-    { key: "gift", label: "ของขวัญ", Icon: Gift },
-    { key: "tag", label: "ป้ายราคา", Icon: Tag },
-    { key: "shirt", label: "เสื้อผ้า", Icon: Shirt },
-    { key: "creditcard", label: "บัตรเครดิต", Icon: CreditCard },
-    { key: "soap", label: "ของใช้", Icon: SoapDispenserDroplet },
-  ],
-  "งาน & การเงิน": [
-    { key: "briefcase", label: "งาน", Icon: Briefcase },
-    { key: "laptop", label: "คอม", Icon: Laptop },
-    { key: "calculator", label: "คำนวณ", Icon: Calculator },
-    { key: "barchart", label: "รายงาน", Icon: BarChart },
-    { key: "coins", label: "เหรียญ", Icon: Coins },
-    { key: "wallet", label: "กระเป๋าเงิน", Icon: Wallet },
-  ],
-  "การเรียนรู้": [
-    { key: "book", label: "หนังสือ", Icon: BookOpen },
-    { key: "graduation", label: "เรียน", Icon: GraduationCap },
-    { key: "pencil", label: "เขียน", Icon: Pencil },
-  ],
-  "กีฬา & กิจกรรม": [
-    { key: "dumbbell", label: "ฟิตเนส", Icon: Dumbbell },
-    { key: "goal", label: "ฟุตบอล", Icon: Goal },
-    { key: "trophy", label: "ถ้วยรางวัล", Icon: Trophy },
-    { key: "volleyball", label: "วอลเลย์บอล", Icon: Volleyball },
-  ],
-  "สัตว์เลี้ยง": [
-    { key: "dog", label: "สุนัข", Icon: Dog },
-    { key: "cat", label: "แมว", Icon: Cat },
-    { key: "fish", label: "ปลา", Icon: Fish },
-    { key: "bird", label: "นก", Icon: Bird },
-  ],
-  "บ้าน & ครอบครัว": [
-    { key: "home", label: "บ้าน", Icon: Home },
-    { key: "sofa", label: "โซฟา", Icon: Sofa },
-    { key: "bed", label: "เตียง", Icon: Bed },
-    { key: "wrench", label: "ประแจ", Icon: Wrench },
-    { key: "hammer", label: "ค้อน", Icon: Hammer },
-  ],
-  "บันเทิง & ผ่อนคลาย": [
-    { key: "game", label: "เกม", Icon: Gamepad },
-    { key: "music", label: "เพลง", Icon: Music },
-    { key: "film", label: "หนัง", Icon: Film },
-    { key: "popcorn", label: "ป๊อปคอร์น", Icon: Popcorn },
-    { key: "clapper", label: "กองถ่าย", Icon: Clapperboard },
-    { key: "sprout", label: "ปลูกต้นไม้", Icon: Sprout },
-  ],
+export const ICON_SETS_OUTCOME: Record<string, IconItem[]> = {
+    "อาหาร & เครื่องดื่ม": [
+        { key: "food", label: "อาหาร", Icon: Utensils, iconName: "Utensils" },
+        { key: "drink", label: "เครื่องดื่ม", Icon: Beer, iconName: "Beer" },
+        { key: "coffee", label: "กาแฟ/คาเฟ่", Icon: Coffee, iconName: "Coffee" },
+        { key: "pizza", label: "ฟาสต์ฟู้ด", Icon: Pizza, iconName: "Pizza" },
+    ],
+    "เดินทาง & คมนาคม": [
+        { key: "bus", label: "รถเมล์", Icon: Bus, iconName: "Bus" },
+        { key: "train", label: "รถไฟ/รถไฟฟ้า", Icon: Train, iconName: "Train" },
+        { key: "car", label: "แท็กซี่/รถส่วนตัว", Icon: Car, iconName: "Car" },
+        { key: "fuel", label: "ค่าน้ำมัน", Icon: Fuel, iconName: "Fuel" },
+        { key: "map", label: "ท่องเที่ยว", Icon: MapPin, iconName: "MapPin" },
+    ],
+    "ช้อปปิ้ง & ไลฟ์สไตล์": [
+        { key: "shopping", label: "ช้อปปิ้ง", Icon: ShoppingBag, iconName: "ShoppingBag" },
+        { key: "grocery", label: "ซูเปอร์มาร์เก็ต", Icon: ShoppingCart, iconName: "ShoppingCart" },
+        { key: "clothes", label: "เสื้อผ้า", Icon: Shirt, iconName: "Shirt" },
+        { key: "tag", label: "คูปอง/ส่วนลด", Icon: Tag, iconName: "Tag" },
+    ],
+    "บ้าน & สาธารณูปโภค": [
+        { key: "rent", label: "ค่าเช่าบ้าน", Icon: Home, iconName: "Home" },
+        { key: "furniture", label: "เฟอร์นิเจอร์", Icon: Sofa, iconName: "Sofa" },
+        { key: "repair", label: "ซ่อมแซมบ้าน", Icon: Wrench, iconName: "Wrench" },
+        { key: "utilities", label: "ค่าน้ำ/ไฟ/เน็ต", Icon: CreditCard, iconName: "CreditCard" },
+    ],
+    "สุขภาพ & ฟิตเนส": [
+        { key: "health", label: "สุขภาพ/โรงพยาบาล", Icon: HeartPulse, iconName: "HeartPulse" },
+        { key: "gym", label: "ฟิตเนส/กีฬา", Icon: Dumbbell, iconName: "Dumbbell" },
+        { key: "book", label: "การศึกษา/หนังสือ", Icon: Book, iconName: "Book" },
+    ],
+    "บริการ & งานช่าง": [
+        { key: "haircut", label: "ตัดผม/สปา", Icon: Scissors, iconName: "Scissors" },
+        { key: "service", label: "บริการทั่วไป", Icon: Briefcase, iconName: "Briefcase" },
+        { key: "cleaning", label: "ทำความสะอาด", Icon: WashingMachine, iconName: "WashingMachine" },
+    ],
+    "ความบันเทิง & อุปกรณ์": [
+        { key: "games", label: "เกม/ความบันเทิง", Icon: Gamepad2, iconName: "Gamepad2" },
+        { key: "phone", label: "มือถือ/แกดเจ็ต", Icon: Smartphone, iconName: "Smartphone" },
+        { key: "tv", label: "ทีวี/สตรีมมิ่ง", Icon: Tv, iconName: "Tv" },
+    ],
+    "การเงิน & อื่น ๆ": [
+        { key: "wallet", label: "เงินสด", Icon: Wallet, iconName: "Wallet" },
+        { key: "card", label: "บัตรเครดิต", Icon: CreditCard, iconName: "CreditCard" },
+        { key: "pets", label: "สัตว์เลี้ยง", Icon: PawPrint, iconName: "PawPrint" },
+        { key: "world", label: "บริจาค/สังคม", Icon: Globe, iconName: "Globe" },
+    ],
 };
 
-export default function CategoryCustom() {
-  const nav = useNavigate();
-  const { setTempCategory } = useTempCategory();
+export const CUSTOM_ICONS = Object.fromEntries(
+    Object.values(ICON_SETS_OUTCOME).flat().map((it) => [it.iconName, it.Icon])
+);
 
-  const [picked, setPicked] = useState<IconItem | null>(null);
-  const [name, setName] = useState("");
-  const [query, setQuery] = useState("");
+export function OutcomeCustom() {
+    const navigate = useNavigate();
+    const [picked, setPicked] = useState<IconItem | null>(null);
+    const [name, setName] = useState("");
+    const [query, setQuery] = useState("");
 
-  const filteredSets = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return ICON_SETS;
+    const filteredSets = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return ICON_SETS_OUTCOME;
+        const next: Record<string, IconItem[]> = {};
+        Object.entries(ICON_SETS_OUTCOME).forEach(([group, list]) => {
+            const hit = list.filter(
+                (it) => it.label.toLowerCase().includes(q) || it.key.toLowerCase().includes(q)
+            );
+            if (hit.length) next[group] = hit;
+        });
+        return next;
+    }, [query]);
 
-    const next: Record<string, IconItem[]> = {};
-    Object.entries(ICON_SETS).forEach(([group, list]) => {
-      if (group.toLowerCase().includes(q)) {
-        next[group] = list;
-        return;
-      }
-      const hit = list.filter(
-        (it) =>
-          it.label.toLowerCase().includes(q) ||
-          it.key.toLowerCase().includes(q)
-      );
-      if (hit.length) next[group] = hit;
-    });
-    return next;
-  }, [query]);
+    const handleConfirm = () => {
+        if (!picked || !name.trim()) {
+            alert("กรุณาเลือกไอคอนและตั้งชื่อ");
+            return;
+        }
+        const payload = { label: name.trim(), icon: picked.iconName };
 
-  function handleConfirm() {
-    const trimmed = name.trim();
-    if (!picked || !trimmed) {
-      alert("กรุณาเลือกไอคอนและตั้งชื่อ");
-      return;
-    }
-    // ✅ ตั้งค่าหมวดชั่วคราวแล้วกลับไปหน้า Expense
-    setTempCategory({ name: trimmed, iconKey: picked.key });
-    nav(-1); // กลับหน้าก่อนหน้า (Expense)
-  }
+        try {
+            sessionStorage.setItem("customOutcome", JSON.stringify(payload));
+            sessionStorage.setItem("customOutcomeLabel", payload.label);
+            sessionStorage.setItem("customOutcomeIcon", payload.icon);
+            window.dispatchEvent(new CustomEvent("customOutcomeSaved", { detail: payload }));
+        } catch {}
 
-  return (
-    <div className="cc-wrap">
-      {/* Header */}
-      <header className="cc-header">
-        <h1 className="cc-title">OutcomeCustom</h1>
-      </header>
+        navigate("/expense", {
+            replace: true,
+            state: {
+                customOutcome: payload,
+                custom: payload
+            },
+        });
+    };
 
-      {/* Search bar */}
-      <div className="cc-search">
-        <Search className="cc-search-icon" />
-        <input
-          className="cc-search-input"
-          placeholder="ค้นหาไอคอน… (พิมพ์เช่น กาแฟ, รถ, งาน, music)"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        {query && (
-          <button className="cc-search-clear" onClick={() => setQuery("")} aria-label="ล้างคำค้น">
-            ×
-          </button>
-        )}
-      </div>
+    return (
+        <div className="cc-wrap">
+            <header className="cc-header">
+                <button className="cc-back-btn" onClick={() => navigate(-1)}>
+                    <ChevronLeft size={24} strokeWidth={2.5} />
+                </button>
+                <h1 className="cc-title">Custom Outcome</h1>
+            </header>
 
-      {/* Creator */}
-      <section className="cc-creator">
-        <div className="cc-picked">
-          {picked ? <picked.Icon className="cc-picked-icon" /> : <span>?</span>}
-        </div>
-
-        <div className="cc-namefield">
-          <input
-            className="cc-nameinput"
-            placeholder="ชื่อหมวดหมู่"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={32}
-          />
-          <div className="cc-underline" />
-        </div>
-
-        <button className="cc-confirm" onClick={handleConfirm} aria-label="ยืนยัน">
-          <Check className="cc-checkicon" />
-        </button>
-      </section>
-
-      {/* Library (กรองตามคำค้น) */}
-      <section className="cc-library">
-        {Object.keys(filteredSets).length === 0 ? (
-          <p className="cc-noresult">ไม่พบไอคอนที่ตรงกับ “{query}”</p>
-        ) : (
-          Object.entries(filteredSets).map(([group, list]) => (
-            <div key={group} className="cc-group">
-              <h3 className="cc-group-title">{group}</h3>
-              <div className="cc-grid">
-                {list.map((item) => (
-                  <button
-                    key={item.key}
-                    className={`cc-chip ${picked?.key === item.key ? "active" : ""}`}
-                    onClick={() => setPicked(item)}
-                    title={item.label}
-                  >
-                    <item.Icon className="cc-icon" />
-                  </button>
-                ))}
-              </div>
+            <div className="cc-search">
+                <Search className="cc-search-icon" />
+                <input
+                    className="cc-search-input"
+                    placeholder="ค้นหา..."
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                />
+                {query && (
+                    <button className="cc-search-clear" onClick={() => setQuery("")}>
+                        ×
+                    </button>
+                )}
             </div>
-          ))
-        )}
-      </section>
 
-      <BottomNav />
-    </div>
-  );
+            <section className="cc-creator">
+                <div className="cc-picked">
+                    {picked ? <picked.Icon className="cc-picked-icon" /> : <span>?</span>}
+                </div>
+                <div className="cc-namefield">
+                    <input
+                        className="cc-nameinput"
+                        placeholder="ชื่อหมวดรายจ่าย"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                    />
+                    <div className="cc-underline" />
+                </div>
+                <button className="cc-confirm" onClick={handleConfirm}>
+                    <Check className="cc-checkicon" />
+                </button>
+            </section>
+
+            <section className="cc-library">
+                {Object.entries(filteredSets).map(([group, list]) => (
+                    <div key={group} className="cc-group">
+                        <h3 className="cc-group-title">{group}</h3>
+                        <div className="cc-grid">
+                            {list.map((item) => (
+                                <button
+                                    key={item.key}
+                                    className={`cc-chip ${picked?.key === item.key ? "active" : ""}`}
+                                    onClick={() => setPicked(item)}
+                                >
+                                    <item.Icon className="cc-icon" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </section>
+
+            <BottomNav />
+        </div>
+    );
 }
+
+export default OutcomeCustom;

@@ -15,10 +15,11 @@ import {
     Gamepad, Music, Film, Popcorn, Clapperboard, Sprout,
 } from "lucide-react";
 import BottomNav from "./buttomnav";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTempCategory } from "../TempCategoryContext";
 import { usePaymentMethod } from "../PaymentMethodContext";
 import { useEditPrefill } from "../hooks/useEditPrefill";
+import { CUSTOM_ICONS as OUTCOME_ICON_MAP } from "./customoutcome";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
 
@@ -42,7 +43,7 @@ const getNowHHMM = () => {
 };
 const getNowLocalDT = () => `${getTodayISO()}T${getNowHHMM()}`;
 
-const customIconByKey: Record<string, React.FC<any>> = {
+const BUILTIN_ICON_REG: Record<string, React.FC<any>> = {
     food: Utensils, pizza: Pizza, drumstick: Drumstick, coffee: Coffee, beer: Beer,
     cupsoda: CupSoda, icecream: IceCream, candy: Candy, cake: Cake,
     car: Car, bus: Bus, bike: Bike, plane: Plane, train: Train, ship: Ship,
@@ -63,6 +64,25 @@ const customIconByKey: Record<string, React.FC<any>> = {
             <circle cx="19" cy="12" r="1.8" />
         </svg>
     ),
+};
+
+const EXACT_NAME_ICON_REG: Record<string, React.FC<any>> = Object.fromEntries(
+    Object.entries(OUTCOME_ICON_MAP || {}).map(([k, V]) => [k, V as any])
+);
+
+const ICON_REG: Record<string, React.FC<any>> = {
+    ...BUILTIN_ICON_REG,
+    ...EXACT_NAME_ICON_REG,
+};
+
+const getIconByName = (name?: string) => {
+    if (!name) return ICON_REG.more || BUILTIN_ICON_REG.more;
+    if (ICON_REG[name]) return ICON_REG[name];
+    const lc = name.toLowerCase();
+    const hitK = Object.keys(ICON_REG).find(k => k.toLowerCase() === lc);
+    if (hitK) return ICON_REG[hitK];
+    if (BUILTIN_ICON_REG[lc]) return BUILTIN_ICON_REG[lc];
+    return ICON_REG.more || BUILTIN_ICON_REG.more;
 };
 
 const defaultIconKeyByCategory: Record<Category, string> = {
@@ -91,6 +111,7 @@ const IconCheck = () => (
 
 export default function Expense() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { tempCategory, clearTempCategory } = useTempCategory();
     const { payment, setPayment, clearPayment } = usePaymentMethod();
 
@@ -99,12 +120,19 @@ export default function Expense() {
     const [category, setCategory] = useState<Category>(() =>
         draft.category ?? (tempCategory ? "อื่นๆ" : "อาหาร")
     );
-    const [amount, setAmount]   = useState<string>(() => draft.amount ?? "0");
-    const [note, setNote]       = useState<string>(() => draft.note ?? "");
-    const [place, setPlace]     = useState<string>(() => draft.place ?? "");
-    const [dt, setDt]           = useState<string>(() => getNowLocalDT());
-
+    const [amount, setAmount] = useState<string>(() => draft.amount ?? "0");
+    const [note, setNote] = useState<string>(() => draft.note ?? "");
+    const [place, setPlace] = useState<string>(() => draft.place ?? "");
+    const [dt, setDt] = useState<string>(() => getNowLocalDT());
     const [hydrated, setHydrated] = useState(false);
+
+    const incoming = (location.state as any)?.customOutcome || (location.state as any)?.custom || null;
+    const stored = safeParse(sessionStorage.getItem("customOutcome"));
+    const customOutcome = incoming || stored || null;
+    const customOutcomeLabel = customOutcome?.label || sessionStorage.getItem("customOutcomeLabel") || tempCategory?.name || "อื่นๆ";
+    const customOutcomeIconName = customOutcome?.icon || sessionStorage.getItem("customOutcomeIcon") || tempCategory?.iconKey || "more";
+    const OtherIcon = getIconByName(customOutcomeIconName);
+
     useEffect(() => { setHydrated(true); }, []);
 
     useEditPrefill((d) => {
@@ -159,32 +187,15 @@ export default function Expense() {
         else { el.click(); el.focus(); }
     };
 
-    /**
-     * @description ทำความสะอาดและจำกัดตัวเลขทศนิยมไม่เกิน 2 ตำแหน่ง
-     */
     const sanitizeAmount = (raw: string) => {
-        let v = raw.replace(/[^\d.]/g, ""); // ลบอักขระที่ไม่ใช่ตัวเลขหรือจุดทศนิยม
-
-        // 1. จัดการจุดทศนิยมซ้ำซ้อน
+        let v = raw.replace(/[^\d.]/g, "");
         const parts = v.split(".");
-        if (parts.length > 2) {
-            v = parts[0] + "." + parts.slice(1).join("");
-        }
-
-        // 2. จัดการเลขศูนย์นำหน้า (ยกเว้น 0.)
-        if (v.length > 1 && v.startsWith("0") && !v.startsWith("0.")) {
-            v = String(parseInt(v || "0", 10));
-        }
-
-        // 3. จำกัดทศนิยมไม่เกิน 2 ตำแหน่ง
+        if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
+        if (v.length > 1 && v.startsWith("0") && !v.startsWith("0.")) v = String(parseInt(v || "0", 10));
         if (v.includes(".")) {
             const decimalPart = v.split(".")[1];
-            if (decimalPart.length > 2) {
-                // ตัดส่วนเกินออกให้เหลือแค่ 2 ตำแหน่ง
-                v = v.split(".")[0] + "." + decimalPart.slice(0, 2);
-            }
+            if (decimalPart.length > 2) v = v.split(".")[0] + "." + decimalPart.slice(0, 2);
         }
-
         if (v === "" || v === ".") v = "0";
         return v;
     };
@@ -192,21 +203,15 @@ export default function Expense() {
     const pad = useMemo(() => ["1","2","3","4","5","6","7","8","9",".","0","⌫"], []);
     const onTapKey = (k: string) => {
         let next = amount;
-
-        if (k === "⌫") {
-            next = next.length <= 1 ? "0" : next.slice(0,-1);
-        } else if (k === ".") {
-            next = next.includes(".") ? next : next + ".";
-        } else {
-            // ตรวจสอบว่าถ้ามีจุดทศนิยมอยู่แล้ว และมี 2 หลักแล้ว จะไม่เพิ่มตัวเลขอีก
+        if (k === "⌫") next = next.length <= 1 ? "0" : next.slice(0,-1);
+        else if (k === ".") next = next.includes(".") ? next : next + ".";
+        else {
             if (next.includes(".")) {
                 const decimalPart = next.split(".")[1];
                 if (decimalPart.length >= 2) return;
             }
             next = next === "0" ? k : next + k;
         }
-
-        // ใช้ sanitizeAmount อีกครั้งเพื่อยืนยันความถูกต้อง
         next = sanitizeAmount(next);
         setAmount(next);
         saveDraft({ amount: next });
@@ -224,6 +229,9 @@ export default function Expense() {
         clearTempCategory(); if (typeof clearPayment === "function") clearPayment();
         sessionStorage.removeItem(DRAFT_KEY);
         sessionStorage.removeItem("edit_id_expense");
+        sessionStorage.removeItem("customOutcome");
+        sessionStorage.removeItem("customOutcomeLabel");
+        sessionStorage.removeItem("customOutcomeIcon");
     };
 
     const onConfirm = async () => {
@@ -231,12 +239,15 @@ export default function Expense() {
             alert("Required ❌");
             return;
         }
-
         const finalCategory =
-            category === "อื่นๆ" && tempCategory?.name ? tempCategory.name : category;
+            category === "อื่นๆ"
+                ? (customOutcomeLabel || tempCategory?.name || "อื่นๆ")
+                : category;
 
         const iconKey =
-            category === "อื่นๆ" ? (tempCategory?.iconKey || "more") : defaultIconKeyByCategory[category];
+            category === "อื่นๆ"
+                ? (customOutcomeIconName || tempCategory?.iconKey || "more")
+                : defaultIconKeyByCategory[category];
 
         const occurredAtISO = `${dt}:00`;
 
@@ -279,10 +290,6 @@ export default function Expense() {
         const [y, m, dd] = d.split("-");
         return `${dd}/${m}/${y} ${t} น.`;
     };
-
-    const otherLabel = tempCategory?.name || "อื่นๆ";
-    const OtherIcon =
-        (tempCategory?.iconKey && customIconByKey[tempCategory.iconKey]) || customIconByKey["more"];
 
     return (
         <div className="calc-wrap">
@@ -328,7 +335,7 @@ export default function Expense() {
                 <button className={`cat ${category === "อื่นๆ" ? "active" : ""}`}
                         onClick={() => { setCategory("อื่นๆ"); saveDraft({ category: "อื่นๆ" }); navigate("/customoutcome"); }}>
                     <OtherIcon className={`icon ${category === "อื่นๆ" ? "icon-active" : ""} lucide`} size={20} strokeWidth={2} />
-                    <span>{otherLabel}</span>
+                    <span>{customOutcomeLabel}</span>
                 </button>
             </div>
 

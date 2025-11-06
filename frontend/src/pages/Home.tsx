@@ -6,8 +6,10 @@ import "./Home.css";
 import {
     Building2, Landmark, CreditCard, Wallet, PiggyBank, Coins, MoreVertical, Edit2, Trash2,
     Utensils, Train, Car, Bus, Bike, Coffee, Gift, Tag, ShoppingBag, ShoppingCart,
-    Home as HomeIcon, HeartPulse, Activity, Fuel, MapPin, RefreshCw
+    Home as HomeIcon, HeartPulse, Activity, Fuel, MapPin, RefreshCw,Pizza
 } from "lucide-react";
+import { CUSTOM_ICONS as CUSTOM_INCOME_ICONS } from "./customincome";
+import { CUSTOM_ICONS as CUSTOM_OUTCOME_ICONS } from "./customoutcome";
 
 const API_BASE =
     (import.meta as any)?.env?.VITE_API_BASE ||
@@ -44,14 +46,103 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
     coins: Coins,
 };
 
-const TX_ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
-    Utensils, Train, Car, Bus, Bike, Coffee, Gift, Tag, ShoppingBag, ShoppingCart,
-    Home: HomeIcon, HeartPulse, Activity, Fuel, MapPin, Wallet, CreditCard,RefreshCw
+const BUILTIN_ICONS: Record<string, React.ComponentType<any>> = {
+    Utensils, Train, Wallet, CreditCard, Car, Bus, Bike, Coffee, Gift, Tag,
+    ShoppingBag, ShoppingCart, Home: HomeIcon, HeartPulse, Activity, Fuel, MapPin,
+    RefreshCw, Pizza
 };
 
-function IconByKey({ name, size = 18 }: { name?: string | null; size?: number }) {
-    const Key = (name || "").trim();
-    const Icon = (Key && TX_ICONS[Key]) || Utensils;
+const ICONS: Record<string, React.ComponentType<any>> = {
+    ...BUILTIN_ICONS,
+    ...CUSTOM_INCOME_ICONS,
+    ...CUSTOM_OUTCOME_ICONS,
+};
+
+// เพิ่ม Alias maps ที่คัดลอกมาจาก summary.tsx
+const EN_ALIAS: Record<string, string> = {
+    gift: "Gift",
+    present: "Gift",
+    wallet: "Wallet",
+    cash: "Wallet",
+    credit: "CreditCard",
+    card: "CreditCard",
+    food: "Utensils",
+    restaurant: "Utensils",
+    home: "Home",
+    house: "Home",
+    health: "HeartPulse",
+    fuel: "Fuel",
+    shopping: "ShoppingCart",
+    bag: "ShoppingBag",
+    map: "MapPin",
+    train: "Train",
+    car: "Car",
+    bus: "Bus",
+    bike: "Bike",
+    coffee: "Coffee",
+    tag: "Tag",
+    activity: "Activity",
+    handcoins: "HandCoins",
+    pizza: "Pizza" // <-- เพิ่ม pizza
+};
+
+const TH_ALIAS: Record<string, string> = {
+    "ของขวัญ": "Gift",
+    "อาหาร": "Utensils",
+    "กาแฟ": "Coffee",
+    "เดินทาง": "Train",
+    "รถ": "Car",
+    "รถยนต์": "Car",
+    "รถเมล์": "Bus",
+    "จักรยาน": "Bike",
+    "บ้าน": "Home",
+    "สุขภาพ": "HeartPulse",
+    "น้ำมัน": "Fuel",
+    "ช้อปปิ้ง": "ShoppingCart",
+    "ซื้อของ": "ShoppingCart",
+    "กระเป๋า": "ShoppingBag",
+    "แผนที่": "MapPin",
+    "บัตรเครดิต": "CreditCard",
+    "เงินสด": "Wallet",
+    "ธนาคาร": "Wallet",
+    "ลงทุน": "Activity"
+};
+
+// ฟังก์ชัน normalizeIconKey ตัวเต็ม
+function normalizeIconKey(raw?: string | null, category?: string | null) {
+    const tryDirect = (k: string) => {
+        if (ICONS[k]) return k;
+        const found = Object.keys(ICONS).find((x) => x.toLowerCase() === k.toLowerCase());
+        return found || undefined;
+    };
+
+    if (raw && raw.trim() !== "") {
+        const k = raw.trim();
+        const direct = tryDirect(k);
+        if (direct) return direct;
+        const alias = EN_ALIAS[k.toLowerCase()];
+        if (alias) return alias;
+    }
+
+    if (category && category.trim() !== "") {
+        const c = category.trim().toLowerCase();
+        for (const [th, val] of Object.entries(TH_ALIAS)) {
+            if (c.includes(th)) return val;
+        }
+        const direct = tryDirect(category);
+        if (direct) return direct;
+    }
+
+    if (raw && raw.toLowerCase() === 'pizza' && ICONS['Pizza']) return 'Pizza';
+    if (category && category.toLowerCase() === 'pizza' && ICONS['Pizza']) return 'Pizza';
+
+    return "Utensils";
+}
+
+function IconByKey(props: { name?: string | null; category?: string | null; size?: number }) {
+    const { name, category, size = 18 } = props; // ใช้ size 18 (เท่าของเดิมใน home.tsx)
+    const key = normalizeIconKey(name, category);
+    const Icon = ICONS[key] || Utensils;
     return <Icon size={size} className="tx-icon" />;
 }
 
@@ -352,7 +443,7 @@ export default function Home() {
                         <div className="transaction-item" key={tx.id}>
                             <div className="transaction-info">
                                 <div className="transaction-avatar">
-                                    <IconByKey name={tx.iconKey} />
+                                    <IconByKey name={tx.iconKey} category={tx.category} />
                                 </div>
                                 <div className="transaction-texts">
                                     <span className="transaction-description">{title}</span>
