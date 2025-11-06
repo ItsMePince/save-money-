@@ -3,17 +3,64 @@
 import React, { useMemo, useState } from "react";
 import "./customincome.css";
 import {
-    Check, Search,
-    Briefcase, BarChart, Clock,ChevronLeft, Wallet, ShieldCheck,
-    Laptop, UserCheck, BookOpen, Camera, Bike, Car, PenTool, Code, Banknote,
-    Coins, PiggyBank, LineChart, FileText, Layers, TrendingUp,
-    Home, Bed, Building, Truck, Package,
-    ShoppingBag, Store, Boxes, Tent, CreditCard, Ticket,
-    Video, Mic, Radio, Music, Film, Gamepad,
-    ClipboardList, ClipboardCheck, Trophy, GraduationCap,
-    Gift, Coffee, Star, Gem, HandCoins,
-    Bitcoin, CircuitBoard, Image, Cloud, Lock,
-    Link, Megaphone, FileBadge, Users
+    Check,
+    Search,
+    Briefcase,
+    BarChart,
+    Clock,
+    ChevronLeft,
+    Wallet,
+    ShieldCheck,
+    Laptop,
+    UserCheck,
+    BookOpen,
+    Camera,
+    Bike,
+    Car,
+    PenTool,
+    Code,
+    Banknote,
+    Coins,
+    PiggyBank,
+    LineChart,
+    FileText,
+    Layers,
+    TrendingUp,
+    Home,
+    Bed,
+    Building,
+    Truck,
+    Package,
+    ShoppingBag,
+    Store,
+    Boxes,
+    Tent,
+    CreditCard,
+    Ticket,
+    Video,
+    Mic,
+    Radio,
+    Music,
+    Film,
+    Gamepad,
+    ClipboardList,
+    ClipboardCheck,
+    Trophy,
+    GraduationCap,
+    Gift,
+    Coffee,
+    Star,
+    Gem,
+    HandCoins,
+    Bitcoin,
+    CircuitBoard,
+    Image,
+    Cloud,
+    Lock,
+    Link,
+    Megaphone,
+    FileBadge,
+    Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import BottomNav from "./buttomnav";
@@ -100,7 +147,9 @@ export const ICON_SETS_INCOME: Record<string, IconItem[]> = {
 };
 
 export const CUSTOM_ICONS = Object.fromEntries(
-    Object.values(ICON_SETS_INCOME).flat().map((it) => [it.iconName, it.Icon])
+    Object.values(ICON_SETS_INCOME)
+        .flat()
+        .map((it) => [it.iconName, it.Icon])
 );
 
 export function IncomeCustom() {
@@ -108,15 +157,25 @@ export function IncomeCustom() {
     const [picked, setPicked] = useState<IconItem | null>(null);
     const [name, setName] = useState("");
     const [query, setQuery] = useState("");
+
+    // ✅ ปรับให้ค้นหาได้ทั้ง "ชื่อกลุ่ม", "label", "key" และ "iconName"
     const filteredSets = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!q) return ICON_SETS_INCOME;
+
         const next: Record<string, IconItem[]> = {};
         Object.entries(ICON_SETS_INCOME).forEach(([group, list]) => {
+            const groupHit = group.toLowerCase().includes(q); // ถ้าตรงชื่อกลุ่ม แสดงทั้งกลุ่ม
+            if (groupHit) {
+                next[group] = list;
+                return;
+            }
+
             const hit = list.filter(
                 (it) =>
                     it.label.toLowerCase().includes(q) ||
-                    it.key.toLowerCase().includes(q)
+                    it.key.toLowerCase().includes(q) ||
+                    (it.iconName ?? "").toLowerCase().includes(q)
             );
             if (hit.length) next[group] = hit;
         });
@@ -175,7 +234,7 @@ export function IncomeCustom() {
 
             <section className="cc-library">
                 {Object.entries(filteredSets).map(([group, list]) => (
-                    <div key={group} className="cc-group">
+                    <div key={group} className="cc-group" data-cy={`group-${group.replace(/\s|&/g, "")}`}>
                         <h3 className="cc-group-title">{group}</h3>
                         <div className="cc-grid">
                             {list.map((item) => (
@@ -183,6 +242,9 @@ export function IncomeCustom() {
                                     key={item.key}
                                     className={`cc-chip ${picked?.key === item.key ? "active" : ""}`}
                                     onClick={() => setPicked(item)}
+                                    title={item.label}                 // ✅ ให้ Cypress หาได้ด้วย title
+                                    aria-label={item.label}            // ✅ ช่วยด้าน a11y
+                                    data-cy={`icon-${item.key}`}       // ✅ selector ที่เสถียร
                                 >
                                     <item.Icon className="cc-icon" />
                                 </button>
