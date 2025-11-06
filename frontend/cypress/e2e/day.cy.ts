@@ -1,7 +1,7 @@
 // cypress/e2e/day.cy.ts
 /// <reference types="cypress" />
 
-function makeMonthDataForDay(yyyy: number, mm: number) {
+function makeDayData(yyyy: number, mm: number) {
     const m = String(mm).padStart(2, '0');
     return [
         {
@@ -80,7 +80,7 @@ describe('Day Page - รายการและกราฟเรนเดอ�
                 mm = d.getMonth() + 1;
             }
 
-            const base = makeMonthDataForDay(yyyy, mm);
+            const base = makeDayData(yyyy, mm);
 
             // เติมรายรับในวัน TARGET ให้หน้า Day มีทั้งเขียว/แดง
             const m2 = String(mm).padStart(2, '0');
