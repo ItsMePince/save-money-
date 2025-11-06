@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "name": "Netflix Subscription",
+    "account": "K-Bank",
+    "amount": 499,
+    "date": "10/11/2025",
+    "frequency": "ทุกเดือน"
+  },
+  {
+    "id": 2,
+    "name": "Gym Membership",
+    "account": "SCB",
+    "amount": 899,
+    "date": "05/11/2025",
+    "frequency": "ทุกเดือน"
+  },
+  {
+    "id": 3,
+    "name": "Internet Bill",
+    "account": "Wallet",
+    "amount": 699,
+    "date": "15/11/2025",
+    "frequency": "ทุกเดือน"
+  },
+  {
+    "id": 4,
+    "name": "Spotify Family",
+    "account": "K-Bank",
+    "amount": 199,
+    "date": "10/11/2025",
+    "frequency": "ทุกเดือน"
+  }
+]

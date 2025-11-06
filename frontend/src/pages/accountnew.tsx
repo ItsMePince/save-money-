@@ -18,20 +18,13 @@ const ICONS = [
     { key: "coins", label: "เหรียญ", Icon: Coins },
 ] as const;
 
-// (ข้อมูล Account ที่รับมาจาก state ตอนกด "แก้ไข")
-// ‼️ หมายเหตุ: คุณจะต้องเพิ่ม 'id' เข้ามาใน type นี้ด้วยในอนาคต
-//               เพื่อให้ "แก้ไข" (Edit) ใช้งานได้
 type AccountLocationState = {
-    id?: number; // <--- เราต้องการ ID จาก Database ตรงนี้
+    id?: number;
     name: string;
     amount: number;
     iconKey?: string;
     type?: AccountType
 };
-
-// --- REMOVED ---
-// ลบ function loadAccounts() และ saveAccounts() ออก
-// เราจะใช้ API เรียกข้อมูลจาก Backend แทน
 
 /* ---------- helpers: amount + caret ---------- */
 const formatIntWithGrouping = (digitsOnly: string) => digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -54,7 +47,6 @@ export default function AccountNew() {
     const navigate = useNavigate();
     const { state } = useLocation();
 
-    // state ที่รับมาตอนกด "แก้ไข" (ถ้ามี)
     const editState = state as | { mode: "edit"; account: AccountLocationState } | undefined;
 
     const [name, setName] = useState("");
@@ -65,7 +57,6 @@ export default function AccountNew() {
 
     const SelectedIcon = useMemo(() => ICONS.find((i) => i.key === iconKey)?.Icon ?? Building2, [iconKey]);
 
-    // preload edit state
     useEffect(() => {
         if (editState?.mode === "edit" && editState.account) {
             const a = editState.account;
@@ -76,7 +67,6 @@ export default function AccountNew() {
         }
     }, [editState]);
 
-    // ---------- Amount: caret + auto scroll-right ----------
     const amountRef = useRef<HTMLInputElement | null>(null);
     const onAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const el = e.currentTarget;
@@ -84,6 +74,10 @@ export default function AccountNew() {
         const prevPos = el.selectionStart ?? raw.length;
 
         const digits = raw.replace(/\D/g, "");
+
+        // จำกัดแค่ 8 หลัก (ไม่นับคอมม่า)
+        if (digits.length > 8) return;
+
         const formatted = digits ? formatIntWithGrouping(digits) : "";
 
         const digitsBefore = countDigitsBefore(raw, prevPos);
@@ -100,10 +94,7 @@ export default function AccountNew() {
             }
         });
     };
-    // -------------------------------------------------------
 
-    // --- CHANGED ---
-    // เปลี่ยน handleSubmit ให้เรียก API (fetch) แทน localStorage
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
@@ -113,22 +104,19 @@ export default function AccountNew() {
             return;
         }
 
-        // 1. สร้าง JSON payload ให้ตรงกับ CreateAccountRequest.java
         const payload = {
             name: name.trim(),
-            type: type as AccountType, // "ธนาคาร", "เงินสด" (Backend รับ String ไทยได้)
-            amount: amt,               // Backend รับเป็น Double
+            type: type as AccountType,
+            amount: amt,
             iconKey: iconKey,
         };
 
         const isEditMode = editState?.mode === 'edit';
 
-        // กำหนด URL และ Method (สร้าง = POST, แก้ไข = PUT)
         let url = "http://localhost:8081/api/accounts";
         let method = "POST";
 
         if (isEditMode) {
-            // ‼️ หมายเหตุ: ดูคำอธิบายเรื่อง "แก้ไข" ด้านล่าง
             const accountId = editState.account.id;
             if (!accountId) {
                 alert("เกิดข้อผิดพลาด: ไม่พบ ID ของบัญชีที่ต้องการแก้ไข");
@@ -139,27 +127,22 @@ export default function AccountNew() {
         }
 
         try {
-            // 2. ส่ง Request (ยิง API) ไปหา Spring Boot
             const response = await fetch(url, {
                 method: method,
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify(payload),
-                // 3. สำคัญมาก! ส่ง Cookie (Session) ไปด้วยเพื่อยืนยันตัวตน
                 credentials: "include"
             });
 
             if (response.ok) {
-                // 4. ถ้าสำเร็จ (Backend ตอบ 200 OK)
-                navigate("/home"); // กลับไปหน้าหลัก
+                navigate("/home");
             } else {
-                // 5. ถ้าล้มเหลว (เช่น 401 Unauthorized, 404 Not Found)
                 const errorText = await response.text();
                 alert(`บันทึกไม่สำเร็จ: ${errorText}`);
             }
         } catch (error) {
-            // 6. กรณี Network Error (เชื่อมต่อ Backend ไม่ได้)
             console.error("Error submitting account:", error);
             alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
         }
@@ -170,7 +153,7 @@ export default function AccountNew() {
             <h1 className="title">{editState?.mode === "edit" ? "แก้ไขบัญชี" : "สร้างบัญชี"}</h1>
 
             <form className="form" onSubmit={handleSubmit}>
-                {/* ชื่อบัญชี */}
+                {/* ชื่อบัญชี - จำกัด 20 ตัวอักษร */}
                 <label className="row">
                     <span className="label">ชื่อบัญชี</span>
                     <input
@@ -178,7 +161,7 @@ export default function AccountNew() {
                         placeholder="ชื่อบัญชี"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        maxLength={120}
+                        maxLength={20}
                         autoFocus
                     />
                 </label>
@@ -203,7 +186,7 @@ export default function AccountNew() {
                             className="dropdown"
                             role="listbox"
                             aria-label="เลือกประเภทบัญชี"
-                            onMouseDown={(e) => e.preventDefault()} // กัน blur ระหว่างคลิก
+                            onMouseDown={(e) => e.preventDefault()}
                             style={{
                                 position: "absolute",
                                 left: 0,
@@ -255,48 +238,20 @@ export default function AccountNew() {
                     ))}
                 </div>
 
-                {/* จำนวนเงิน */}
+                {/* จำนวนเงิน - จำกัด 8 หลัก (ไม่นับคอมม่า) */}
                 <label className="row">
                     <span className="label">จำนวนเงิน</span>
-                    <div
-                        className="amount-wrap"
-                        style={{
-                            flex: "1 1 0%",
-                            minWidth: 0,
-                            display: "grid",
-                            gridTemplateColumns: "minmax(0, 1fr) auto",
-                            alignItems: "center",
-                            gap: 8,
-                            width: "100%",
-                        }}
-                    >
+                    <div className="amount-wrap">
                         <input
                             ref={amountRef}
                             className="input number"
                             inputMode="numeric"
+                            placeholder="0"
                             value={amount}
                             onChange={onAmountChange}
                             aria-label="จำนวนเงิน"
-                            style={{
-                                display: "block",
-                                width: "100%",
-                                minWidth: 0,
-                                textAlign: "right",
-                                whiteSpace: "nowrap",
-                                overflowX: "auto",
-                                overflowY: "hidden",
-                                WebkitOverflowScrolling: "touch",
-                                paddingRight: 0,
-                                fontVariantNumeric: "tabular-nums",
-                            }}
                         />
-                        <span
-                            className="unit"
-                            aria-hidden="true"
-                            style={{ position: "static", transform: "none", whiteSpace: "nowrap", color: "var(--muted)" }}
-                        >
-              บาท
-            </span>
+                        <span className="unit" aria-hidden="true">บาท</span>
                     </div>
                 </label>
 

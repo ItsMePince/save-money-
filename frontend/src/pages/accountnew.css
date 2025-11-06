@@ -23,29 +23,48 @@
 
 /* ====== Row (label + value) ====== */
 .row{
+  position: relative;                      /* ใช้สำหรับวาง label แบบ absolute */
   display:flex; align-items:center; gap:12px;
   padding:0 16px; height:56px; width:100%; box-sizing:border-box;
   border:1px solid var(--border); border-radius:12px;
   margin:12px 0; background:#fff;
+  overflow: visible;
 }
 .row:focus-within{ border-color:var(--brand); box-shadow:0 0 0 3px rgba(16,185,129,.25); }
 
-/* label ซ้าย */
-.label{ flex:0 0 auto; white-space:nowrap; color:var(--muted); font-weight:500; }
+/* label (default) */
+.label{
+  color:var(--muted);
+  font-weight:500;
+  font-size: 0.9rem;
+  white-space:nowrap;
+}
 
-/* value ขวา (input/select) */
+/* ค่าทั่วไปของ input/select */
 .row input, .row .select{
-  flex:1 1 0%; min-width:0; width:100%; height:100%;
-  border:none; background:transparent; outline:none;
-  display:block; font-size:1rem; line-height:1.5rem; color:var(--text);
-  text-align:right;
+  flex:1 1 auto;
+  min-width:0;
+  width:100%;
+  height:100%;
+  border:none;
+  background:transparent;
+  outline:none;
+  display:block;
+  font-size:1rem;
+  line-height:1.5rem;
+  color:var(--text);
+  text-align:left;
+  overflow:visible;
 }
 .row input::placeholder{ color:var(--muted); }
 
 /* ชื่อบัญชี: ตัวหนาเมื่อมีค่า */
 .input.text:not(:placeholder-shown){ font-weight:700; }
 
-/* ====== Select (ประเภทบัญชี) + dropdown ====== */
+/* ตัวเลข (amount) ให้ชิดขวา */
+.input.number{ text-align:right; }
+
+/* ====== Select + dropdown ====== */
 .select{ display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
 .placeholder{ color:var(--muted); }
 .chev{ color:var(--muted); margin-left:8px; }
@@ -64,6 +83,7 @@
 .dropdown .opt.active{ background:#ecfdf5; font-weight:600; color:#065f46; }
 
 /* ====== Icons ====== */
+.icon-current { margin-left:auto; }
 .icon-current .icon{ width:22px; height:22px; color:#6b7280; }
 .icon-grid{ margin:10px 0 4px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
 .icon-chip{
@@ -73,51 +93,129 @@
 .icon-chip .icon{ width:22px; height:22px; }
 .icon-chip.active{ outline:2px solid var(--brand); transform:scale(1.08); }
 
-/* ====== Amount (Grid: input 1fr | unit auto) ====== */
-.form .row{ justify-content:initial; }
+/* ===================================================================== */
+/* ===============  จำนวนเงิน: label ลอย + เลขไม่โดนตัด  =============== */
+/* ===================================================================== */
 
+/* ให้ amount-wrap กินพื้นที่เต็มใน .row */
+.row .amount-wrap{ flex:1 1 auto; min-width:0; width:100%; }
+
+/* โครงสร้างภายในใช้ flex เพื่อให้เลขขยายสุด และ "บาท" ชิดขวา */
 .amount-wrap{
-  display:grid; grid-template-columns: 1fr auto;
-  align-items:center; gap:8px; width:100%;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
 }
 
-.input.number{
-  width:100%; min-width:0; text-align:right;
-  white-space:nowrap; overflow:hidden;          /* ⛔️ ไม่สกอลล์ — จะย่อฟอนต์แทน */
-  font-variant-numeric:tabular-nums; font-feature-settings:"tnum";
-  padding-right:0;                               /* 'บาท' อยู่คอลัมน์ขวาแล้ว */
+/* label "จำนวนเงิน" ลอย ไม่กินความกว้าง และไม่ดักคลิก */
+.row:has(.amount-wrap) .label{
+  position:absolute;
+  left:16px; top:50%;
+  transform:translateY(-50%);
+  pointer-events:none;
+  z-index:0;
 }
 
-.amount-wrap .unit{ color:var(--muted); white-space:nowrap; pointer-events:none; }
+/* ขยับบล็อกตัวเลขไปทางขวา (ปรับเลขตามดีไซน์) */
+.row:has(.amount-wrap) .amount-wrap{
+  margin-left: 89px;   /* ปรับได้ */
+}
 
+/* ช่องตัวเลข: ขยายสุดและไม่ถูกคลิป */
+.amount-wrap .input.number{
+  flex:1 1 auto;
+  min-width:0;
+  width:100%;
+  text-align:right;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum";
+  padding-right:4px;   /* เว้นก่อนคำว่า "บาท" */
+}
+
+/* หน่วย "บาท" ไม่ให้ยืด */
+.amount-wrap .unit{
+  flex:0 0 auto;
+  color:var(--muted);
+  white-space:nowrap;
+  pointer-events:none;
+}
+
+/* ===================================================================== */
+/* ===============  ชื่อบัญชี: label ซ้าย, พิมพ์ยาวได้ครบ  ============= */
+/* ===================================================================== */
+
+/* แถวชื่อบัญชี */
+.row:has(.input.text){
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* label "ชื่อบัญชี" อยู่ซ้าย ไม่ลอย */
+.row:has(.input.text) .label{
+  position: static;
+  transform: none;
+  pointer-events: auto;
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  z-index: auto;
+}
+
+/* input: ชิดขวา */
+.row:has(.input.text) input.input.text{
+  padding-left: 0;
+  padding-right: 0;
+  position: static;
+  z-index: auto;
+  min-width: 0;
+  width: 100%;
+  text-align: right;
+  background: transparent;
+  flex: 1 1 auto;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+/* placeholder ชิดขวา */
+.row:has(.input.text) input::placeholder{
+  text-align: right;
+  padding-left: 0;
+  padding-right: 12px;  /* เพิ่มระยะให้ตรงกับ margin-left ของ amount-wrap + ปรับจูน */
+}
 /* ====== Primary action ====== */
 .actions{ margin-top:12px; }
 .primary{
   width:100%; border:none; padding:14px 20px; border-radius:12px;
   background:var(--brand); color:var(--brand-text); font-weight:700; cursor:pointer;
 }
-/* accountnew.css */
+
+/* ====== Overflow fixes ====== */
 .accnew-wrap, .form, .row { overflow: visible; }
 
+/* ====== Dropdown (compact) ====== */
 .dropdown {
-    background: #fff;
-    border: 1px solid var(--border, #e5e7eb);
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,.08);
-    padding: 6px;
-    max-height: 240px;
-    overflow: auto;
-    z-index: 100;
+  background: #fff;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  padding: 6px;
+  max-height: 240px;
+  overflow: auto;
+  z-index: 100;
 }
-
 .dropdown .opt {
-    width: 100%;
-    text-align: left;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 0;
-    background: transparent;
-    cursor: pointer;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 .dropdown .opt:hover { background: #f3f4f6; }
 .dropdown .opt.active { background: #e5f2ff; }
