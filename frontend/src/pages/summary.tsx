@@ -1,3 +1,7 @@
+// src/pages/summary.tsx
+// @ts-nocheck
+import { CUSTOM_ICONS as CUSTOM_INCOME_ICONS } from "./customincome";
+import { CUSTOM_ICONS as CUSTOM_OUTCOME_ICONS } from "./customoutcome";
 import React, { useEffect, useState } from "react";
 import {
     Utensils, X,
@@ -36,10 +40,18 @@ type DayEntry = {
     items: Item[];
 };
 
-const ICONS: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
+type IconDict = Record<string, React.ComponentType<{ size?: number; className?: string; color?: string; strokeWidth?: number }>>;
+
+const BUILTIN_ICONS: IconDict = {
     Utensils, Train, Wallet, CreditCard, Car, Bus, Bike, Coffee, Gift, Tag,
     ShoppingBag, ShoppingCart, Home: HomeIcon, HeartPulse, Activity, Fuel, MapPin,
     RefreshCw
+};
+
+const ICONS: IconDict = {
+    ...BUILTIN_ICONS,
+    ...CUSTOM_INCOME_ICONS,
+    ...CUSTOM_OUTCOME_ICONS,
 };
 
 const EN_ALIAS: Record<string, string> = {
@@ -65,7 +77,7 @@ const EN_ALIAS: Record<string, string> = {
     coffee: "Coffee",
     tag: "Tag",
     activity: "Activity",
-    handcoins: "Wallet"
+    handcoins: "HandCoins"
 };
 
 const TH_ALIAS: Record<string, string> = {
@@ -90,84 +102,23 @@ const TH_ALIAS: Record<string, string> = {
     "ลงทุน": "Activity"
 };
 
-function normalizeIconKey(raw?: string | null, category?: string | null) {
-    const tryDirect = (k: string) =>
-        ICONS[k] ? k : Object.keys(ICONS).find((x) => x.toLowerCase() === k.toLowerCase());
-    if (raw && raw.trim() !== "") {
-        const k = raw.trim();
-        const direct = tryDirect(k);
-        if (direct) return direct;
-        const alias = EN_ALIAS[k.toLowerCase()];
-        if (alias) return alias;
-    }
-    if (category && category.trim() !== "") {
-        const c = category.trim().toLowerCase();
-        for (const [th, val] of Object.entries(TH_ALIAS)) {
-            if (c.includes(th)) return val;
-        }
-        const direct = tryDirect(category);
-        if (direct) return direct;
-    }
-    return "Utensils";
-}
-
-function IconByKey({
-                       name,
-                       category,
-                       size = 16
-                   }: {
-    name?: string | null;
-    category?: string | null;
-    size?: number;
-}) {
-    const key = normalizeIconKey(name, category);
-    const Icon = ICONS[key] || Utensils;
-    return <Icon size={size} />;
-}
-
 function pad2(n: number) { return n.toString().padStart(2, "0"); }
 
 function toISODate(anyDate: string): string {
     if (!anyDate) return new Date().toISOString().slice(0, 10);
-
     const s = anyDate.trim();
-
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
-    if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) {
-        const [y, m, d] = s.split("/");
-        return `${y}-${m}-${d}`;
-    }
-
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-        const [d, m, y] = s.split("/");
-        return `${y}-${m}-${d}`;
-    }
-
-    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
-        const [d, m, y] = s.split("-");
-        return `${y}-${m}-${d}`;
-    }
-
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) { const [y,m,d]=s.split("/"); return `${y}-${m}-${d}`; }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split("/"); return `${y}-${m}-${d}`; }
+    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) { const [d,m,y]=s.split("-"); return `${y}-${m}-${d}`; }
     const dt = new Date(s);
-    if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
-
-    return new Date().toISOString().slice(0, 10);
+    return isNaN(dt.getTime()) ? new Date().toISOString().slice(0, 10) : dt.toISOString().slice(0, 10);
 }
 
 function parseIsoDateToLocal(isoOrAny: string) {
     const iso = toISODate(isoOrAny);
     const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
     return new Date(y, (m ?? 1) - 1, d ?? 1);
-}
-
-function thaiWeekdayAbbr(d: Date) {
-    const map = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
-    return map[d.getDay()];
-}
-
-function dayLabel(d: Date) {
-    return `${thaiWeekdayAbbr(d)} ${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
 }
 
 function ddmmyyyy(d: Date) {
@@ -185,7 +136,7 @@ function isoToLocalDatetime(iso?: string | null): string | undefined {
     const d = new Date(iso);
     if (isNaN(d.getTime())) {
         const tryNoTZ = new Date(iso.replace(" ", "T"));
-        if (isNaN(tryNoTZ.getTime())) return undefined;
+        if (isNaTZ(tryNoTZ)) return undefined;
         const yyyy = tryNoTZ.getFullYear();
         const mm = String(tryNoTZ.getMonth() + 1).padStart(2, "0");
         const dd = String(tryNoTZ.getDate()).padStart(2, "0");
@@ -200,6 +151,8 @@ function isoToLocalDatetime(iso?: string | null): string | undefined {
     const mi = String(d.getMinutes()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
+
+function isNaTZ(d: Date) { return isNaN(d.getTime()); }
 
 function extractLocalDatetime(e: ExpenseDTO): string | undefined {
     const iso =
@@ -228,19 +181,53 @@ function extractLocalDatetime(e: ExpenseDTO): string | undefined {
     return undefined;
 }
 
+function normalizeIconKey(raw?: string | null, category?: string | null) {
+    const tryDirect = (k: string) => {
+        if (ICONS[k]) return k;
+        const found = Object.keys(ICONS).find((x) => x.toLowerCase() === k.toLowerCase());
+        return found || undefined;
+    };
+
+    if (raw && raw.trim() !== "") {
+        const k = raw.trim();
+        const direct = tryDirect(k);
+        if (direct) return direct;
+        const alias = EN_ALIAS[k.toLowerCase()];
+        if (alias) return alias;
+    }
+
+    if (category && category.trim() !== "") {
+        const c = category.trim().toLowerCase();
+        for (const [th, val] of Object.entries(TH_ALIAS)) {
+            if (c.includes(th)) return val;
+        }
+        const direct = tryDirect(category);
+        if (direct) return direct;
+    }
+
+    return "Utensils";
+}
+
+function IconByKey(props: { name?: string | null; category?: string | null; size?: number }) {
+    const { name, category, size = 16 } = props;
+    const key = normalizeIconKey(name, category);
+    const Icon = ICONS[key] || Utensils;
+    return <Icon size={size} />;
+}
+
 function toDayEntries(list: ExpenseDTO[]) {
     const groups = new Map<string, any[]>();
     for (const e of list) {
         const sign = e.type === "EXPENSE" ? -1 : 1;
         const signed = sign * Math.abs(Number(e.amount));
-        const dtLocal = isoToLocalDatetime(e.occurredAt);
-        const isoDate = dtLocal ? dtLocal.slice(0, 10) : toISODate(e.date || "");
+        const dtLocal = extractLocalDatetime(e);
+        const isoDate = dtLocal ? dtLocal.slice(0, 10) : toISODate(e.date || e.occurredAt || "");
         const d = dtLocal ? new Date(dtLocal.replace("T", " ")) : parseIsoDateToLocal(isoDate);
         const item = {
             id: e.id,
             category: e.category,
             paymentMethod: e.paymentMethod || undefined,
-            iconKey: e.iconKey || undefined,
+            iconKey: (e as any).iconKey || (e as any).icon || undefined,
             title: e.category,
             tag: e.paymentMethod ? e.paymentMethod : "",
             amount: isFinite(signed) ? signed : 0,
@@ -248,7 +235,7 @@ function toDayEntries(list: ExpenseDTO[]) {
             isoDate,
             note: e.note || undefined,
             account: e.paymentMethod || undefined,
-            location: e.place || undefined,
+            location: (e as any).place || (e as any).location || undefined,
             type: e.type,
             datetimeLocal: dtLocal || undefined,
         };
@@ -333,7 +320,6 @@ export default function Summary() {
 
     const onEdit = (it: Item) => {
         const isRepeated = it.note?.includes("(ซ้ำ:");
-
         if (isRepeated) {
             navigate('/repeated-transactions', { state: { editId: it.id } });
         } else {
@@ -342,29 +328,20 @@ export default function Summary() {
             setSelected(it);
             const f = itemToForm(it);
             const route = f.typeLabel === "รายได้" ? "/income-edit" : "/expense-edit";
-            navigate(route, {
-                state: { mode: "edit", data: { ...f, id: it.id } },
-            });
+            navigate(route, { state: { mode: "edit", data: { ...f, id: it.id } } });
         }
     };
 
     const tryDeleteEndpoints = async (id: number, note: string | undefined) => {
         const isRepeated = note?.includes("(ซ้ำ:");
-
         const API_BASE =
             (import.meta as any)?.env?.VITE_API_BASE ||
             (import.meta as any)?.env?.REACT_APP_API_BASE ||
             "http://localhost:8081";
-
         const url = isRepeated
             ? `${API_BASE}/api/repeated-transactions/${id}`
             : `${API_BASE}/api/expenses/${id}`;
-
-        const res = await fetch(url, {
-            method: "DELETE",
-            credentials: "include"
-        });
-
+        const res = await fetch(url, { method: "DELETE", credentials: "include" });
         return res.ok;
     };
 
