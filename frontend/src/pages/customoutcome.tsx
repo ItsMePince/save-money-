@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import "./customoutcome.css";
 import {
     Check, Search,
-    Utensils, Coffee,ChevronLeft, ShoppingCart, ShoppingBag, Tag,
+    Utensils, Coffee, ChevronLeft, ShoppingCart, ShoppingBag, Tag,
     Bus, Train, Car, Fuel, Home, HeartPulse, CreditCard, Wallet, MapPin,
     Beer, Pizza, Shirt, Gamepad2, PawPrint, Dumbbell, Book, Sofa, Wrench,
     Briefcase, Scissors, Smartphone, Tv, WashingMachine, Globe
@@ -79,8 +79,15 @@ export function OutcomeCustom() {
         if (!q) return ICON_SETS_OUTCOME;
         const next: Record<string, IconItem[]> = {};
         Object.entries(ICON_SETS_OUTCOME).forEach(([group, list]) => {
+            if (group.toLowerCase().includes(q)) {
+                next[group] = list;
+                return;
+            }
             const hit = list.filter(
-                (it) => it.label.toLowerCase().includes(q) || it.key.toLowerCase().includes(q)
+                (it) =>
+                    it.label.toLowerCase().includes(q) ||
+                    it.key.toLowerCase().includes(q) ||
+                    it.iconName.toLowerCase().includes(q)
             );
             if (hit.length) next[group] = hit;
         });
@@ -93,20 +100,15 @@ export function OutcomeCustom() {
             return;
         }
         const payload = { label: name.trim(), icon: picked.iconName };
-
         try {
             sessionStorage.setItem("customOutcome", JSON.stringify(payload));
             sessionStorage.setItem("customOutcomeLabel", payload.label);
             sessionStorage.setItem("customOutcomeIcon", payload.icon);
             window.dispatchEvent(new CustomEvent("customOutcomeSaved", { detail: payload }));
         } catch {}
-
         navigate("/expense", {
             replace: true,
-            state: {
-                customOutcome: payload,
-                custom: payload
-            },
+            state: { customOutcome: payload, custom: payload },
         });
     };
 

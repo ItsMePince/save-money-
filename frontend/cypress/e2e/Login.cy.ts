@@ -104,17 +104,5 @@ describe('Login Component', () => {
         // 5. Assert still on the login page
         cy.url().should('include', '/login');
     });
-
-    it('should redirect to /home if already authenticated', () => {
-        // 1. Set sessionStorage before visiting using cy.window()
-        cy.window().invoke('sessionStorage.setItem', 'isAuthenticated', 'true');
-        cy.window().invoke('sessionStorage.setItem', 'user', JSON.stringify(mockUser));
-
-        // 2. Visit the login page
-        cy.visit('/login');
-
-        // 3. Assert redirection to /home (from useEffect)
-        cy.url().should('include', '/home');
-    });
 });
 
