@@ -1,0 +1,5 @@
+[
+  { "id": 1, "name": "บัญชีออมทรัพย์ (KBank)", "type": "BANK", "amount": 15000 },
+  { "id": 2, "name": "บัญชีเงินสด", "type": "CASH", "amount": 2000 },
+  { "id": 999, "name": "บัญชีออมทรัพย์ทดสอบ", "type": "BANK", "amount": 5000 }
+]

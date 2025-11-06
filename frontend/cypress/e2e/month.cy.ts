@@ -17,7 +17,7 @@ function uiLoginIfNeeded() {
             .filter(':visible')
             .first()
             .clear()
-            .type('john');
+            .type('admin');
 
         cy.get(
             [
@@ -32,7 +32,7 @@ function uiLoginIfNeeded() {
             .filter(':visible')
             .first()
             .clear()
-            .type('pass123');
+            .type('admin');
 
         cy.contains('button, [type="submit"]', /login|เข้าสู่ระบบ/i)
             .filter(':visible')
