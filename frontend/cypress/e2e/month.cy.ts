@@ -1,46 +1,30 @@
 /// <reference types="cypress" />
 
-function uiLoginIfNeeded() {
-    cy.location('pathname', { timeout: 10000 }).then((path) => {
-        if (!path.includes('/login')) return;
-        cy.get(
-            [
-                'input[type="text"]',
-                'input[name="username"]',
-                'input#username',
-                'input[autocomplete="username"]',
-                'input[placeholder*="user"]',
-                'input[placeholder*="ชื่อผู้ใช้"]',
-                'input[type="email"]',
-            ].join(', ')
-        )
-            .filter(':visible')
-            .first()
-            .clear()
-            .type('admin');
-
-        cy.get(
-            [
-                'input[type="password"]',
-                'input[name="password"]',
-                'input#password',
-                'input[autocomplete="current-password"]',
-                'input[placeholder*="pass"]',
-                'input[placeholder*="รหัสผ่าน"]',
-            ].join(', ')
-        )
-            .filter(':visible')
-            .first()
-            .clear()
-            .type('admin');
-
-        cy.contains('button, [type="submit"]', /login|เข้าสู่ระบบ/i)
-            .filter(':visible')
-            .first()
-            .click();
-
-        cy.location('pathname', { timeout: 10000 }).should('include', '/home');
-    });
+function makeMonthData(yyyy: number, mm: number) {
+    const m = String(mm).padStart(2, '0');
+    return [
+        {
+            id: Number(`${yyyy}${m}01`),
+            type: 'EXPENSE',
+            category: 'อาหาร',
+            amount: 100,
+            occurredAt: `${yyyy}-${m}-03T12:00:00`,
+        },
+        {
+            id: Number(`${yyyy}${m}02`),
+            type: 'INCOME',
+            category: 'เงินเดือน',
+            amount: 300,
+            occurredAt: `${yyyy}-${m}-10T09:00:00`,
+        },
+        {
+            id: Number(`${yyyy}${m}03`),
+            type: 'EXPENSE',
+            category: 'เดินทาง',
+            amount: 900,
+            occurredAt: `${yyyy}-${m}-22T08:30:00`,
+        },
+    ];
 }
 
 function hoverChartAtDay(day: number) {
