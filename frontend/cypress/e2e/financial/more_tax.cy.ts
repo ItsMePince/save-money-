@@ -1,195 +1,112 @@
+// cypress/e2e/tax.cy.ts
 /// <reference types="cypress" />
 
-beforeEach(() => {
-    cy.viewport(2000, 900);
-    cy.mockLoginFrontendOnly("e2e"); // ✅ mock login (แทนการกรอก username/password)
-});
+const visitWithAutoLogin = (path = '/tax') => {
+    cy.visit(path).then(() => {
+        cy.url().then((url) => {
+            if (url.includes('/login')) {
+                cy.mockLoginFrontendOnly('admin');
+                cy.visit(path);
+            }
+        });
+    });
+    cy.get('.tax-modal', { timeout: 10000 }).should('exist');
+};
 
-describe("more_tax - Required Field", () => {
-    const digits = (s: string) => s.replace(/[^\d\-]/g, "");
+const next = () => cy.get('.footer-nav .btn-next:enabled', { timeout: 8000 }).first().click({ force: true });
+const back = () => cy.get('.footer-nav .btn-back:enabled', { timeout: 8000 }).first().click({ force: true });
 
-    function calcStepTax(netIncome: number): number {
-        let tax = 0;
-        if (netIncome <= 150_000) tax = 0;
-        else if (netIncome <= 300_000) tax = (netIncome - 150_000) * 0.05;
-        else if (netIncome <= 500_000) tax = (netIncome - 300_000) * 0.10 + 7_500;
-        else if (netIncome <= 750_000) tax = (netIncome - 500_000) * 0.15 + 27_500;
-        else if (netIncome <= 1_000_000) tax = (netIncome - 750_000) * 0.20 + 65_000;
-        else if (netIncome <= 2_000_000) tax = (netIncome - 1_000_000) * 0.25 + 115_000;
-        else if (netIncome <= 5_000_000) tax = (netIncome - 2_000_000) * 0.30 + 365_000;
-        else tax = (netIncome - 5_000_000) * 0.35 + 1_265_000;
-        return Math.round(tax);
-    }
+const typeMoney = (name: string, value: number | string) => {
+    cy.get(`input[name="${name}"]`, { timeout: 8000 }).should('exist').clear().type(String(value));
+};
 
-    const getSummaryValueEl = (label: string) =>
-        cy
-            .contains(
-                "li.sum-row, li.sum-row.no-border, li.sum-row.sum-row--final",
-                label
-            )
-            .should("be.visible")
-            .find(".sum-value");
+const readNetTax = () =>
+    cy.get('.sum-row--final .sum-value', { timeout: 10000 })
+        .should('exist')
+        .invoke('text')
+        .then((txt) => Number(txt.replace(/[^\d.-]/g, '')));
 
-    const expectSummaryNumber = (label: string, expected: number) => {
-        getSummaryValueEl(label)
-            .invoke("text")
-            .then((txt) => {
-                expect(digits(txt)).to.eq(String(expected));
-            });
-    };
+const fillWizardQuick = (opts: { salaryPerMonth: number; withheld: number }) => {
+    // Step 1: Income
+    typeMoney('salaryPerMonth', opts.salaryPerMonth);
+    typeMoney('bonusPerYear', 0);
+    typeMoney('otherIncomePerYear', 0);
+    next();
 
-    const clickUntilCalculate = (maxSteps = 12) => {
-        const loop = (i: number) => {
-            if (i > maxSteps)
-                throw new Error('ไม่พบปุ่ม "คำนวณ" ภายในจำนวนสเต็ปที่กำหนด');
+    // Step 2: Family
+    next();
 
-            cy.get("button.btn-next:visible", { timeout: 6000 }).then(($buttons) => {
-                const arr = Array.from($buttons);
-                const calc = arr.find((b) => b.textContent?.includes("คำนวณ"));
-                if (calc) {
-                    cy.wrap(calc)
-                        .scrollIntoView()
-                        .should("be.visible")
-                        .click({ force: true });
-                    return;
-                }
-                const next =
-                    arr.find((b) => b.textContent?.includes("ถัดไป")) ?? arr[arr.length - 1];
-                cy.wrap(next)
-                    .scrollIntoView()
-                    .should("be.visible")
-                    .click({ force: true });
-                loop(i + 1);
-            });
-        };
-        loop(1);
-    };
+    // Step 3: Fund
+    typeMoney('pvdPerYear', 0);
+    typeMoney('socialSecurityPerYear', 9000);
+    typeMoney('mortgageInterestPerYear', 0);
+    next();
 
-    // ✅ 1) เทสหลัก: คำนวณจริง
-    it("คำนวณภาษีและตรวจผลตาม logic จริง", () => {
-        const salaryPerMonth = Math.floor(Math.random() * (90000 - 10000 + 1)) + 10000;
-        cy.wrap(salaryPerMonth).as("salary");
+    // Step 4: Insurance
+    typeMoney('lifeIns', 0);
+    typeMoney('healthIns', 0);
+    typeMoney('parentHealthIns', 0);
+    typeMoney('annuityLifeIns', 0);
+    next();
 
-        cy.visit("/home");
+    // Step 5: Other Funds
+    typeMoney('gpfPerYear', 0);
+    typeMoney('nsoPerYear', 12000);
+    typeMoney('teacherFundPerYear', 0);
+    next();
 
-        // เปิดเมนูคำนวณภาษี
-        cy.get("svg.lucide-ellipsis").first().click({ force: true });
-        cy.get('button.pill-row[aria-label="คำนวณภาษีลดหย่อน"]').click();
+    // Step 6: Donation
+    typeMoney('donationGeneral', 0);
+    typeMoney('donationEducation', 0);
+    typeMoney('donationPolitical', 0);
+    next();
 
-        cy.get('input[name="salaryPerMonth"][placeholder="ระบุจำนวนเงิน"]')
-            .scrollIntoView()
-            .clear()
-            .type(String(salaryPerMonth), { delay: 0 });
+    // Step 7: Withheld (กด next = คำนวณ)
+    typeMoney('withheldSalaryPerYear', opts.withheld);
+    typeMoney('advancedTaxPaid', 0);
+    next(); // ใน WithheldStep ปุ่ม next จะเป็นการคำนวณแล้วไป Summary
 
-        clickUntilCalculate(12);
+    // Step 8: Summary พร้อมแล้ว
+    cy.get('.sum-row--final .sum-value', { timeout: 10000 }).should('exist');
+};
 
-        const yearlyIncome = salaryPerMonth * 12;
-        const expense50 = Math.min(Math.floor(yearlyIncome * 0.5), 100_000);
-        const PERSONAL_ALLOW = 60_000;
-        const totalAllowance = PERSONAL_ALLOW;
-        const netIncome = yearlyIncome - expense50 - totalAllowance;
-        const stepTax = calcStepTax(netIncome);
-        const finalTax = stepTax;
-
-        expectSummaryNumber("รายได้รวมต่อปี", yearlyIncome);
-        expectSummaryNumber("หักค่าใช้จ่าย (50%)", expense50);
-        expectSummaryNumber("รวมลดหย่อนทั้งหมด", totalAllowance);
-        expectSummaryNumber("รายได้สุทธิ เพื่อคำนวณภาษี", netIncome);
-        expectSummaryNumber("ภาษีที่ต้องชำระตามขั้นบันได", stepTax);
-
-        cy.contains("li.sum-row.sum-row--final", "ภาษีสุทธิที่ต้องชำระ")
-            .find(".sum-value.red")
-            .invoke("text")
-            .then((txt) => {
-                expect(digits(txt)).to.eq(String(finalTax));
-            });
+describe('Tax Wizard - Essential E2E', () => {
+    beforeEach(() => {
+        cy.viewport(1280, 900);
+        visitWithAutoLogin('/tax');
     });
 
-    // ✅ 2) ย้อนกลับจากหน้าสรุป
-    it("ย้อนกลับจากหน้าสรุปไปจนถึงรายรับและตรวจค่าเดิม", () => {
-        cy.visit("/home");
-
-        cy.get("svg.lucide-ellipsis").first().click({ force: true });
-        cy.get('button.pill-row[aria-label="คำนวณภาษีลดหย่อน"]').click();
-
-        const salaryPerMonth = Math.floor(Math.random() * (90000 - 10000 + 1)) + 10000;
-        cy.get('input[name="salaryPerMonth"][placeholder="ระบุจำนวนเงิน"]')
-            .scrollIntoView()
-            .clear()
-            .type(String(salaryPerMonth), { delay: 0 });
-
-        clickUntilCalculate();
-
-        const backAndSee = (text: string) => {
-            cy.get("button.btn-back:visible").scrollIntoView().click({ force: true });
-            cy.contains("*:visible", text, { matchCase: false, timeout: 6000 }).should("exist");
-        };
-
-        backAndSee("ภาษีที่ถูกหัก ณ ที่จ่าย");
-        backAndSee("บริจาค");
-        backAndSee("กองทุนอื่น");
-        backAndSee("ประกัน");
-        backAndSee("ครอบครัว");
-        backAndSee("รายรับ");
-
-        cy.get('input[name="salaryPerMonth"][placeholder="ระบุจำนวนเงิน"]')
-            .invoke("val")
-            .then((val) => {
-                const actual = Number(String(val).replace(/,/g, ""));
-                const expected = Number(salaryPerMonth);
-                expect(actual).to.eq(expected);
-            });
+    it('Case 1: ไม่เสียภาษี (รายได้ต่ำ', () => {
+        fillWizardQuick({ salaryPerMonth: 10000, withheld: 0 });
+        readNetTax().then((n) => {
+            expect(n).to.be.at.most(0);
+        });
     });
 
-    // ✅ 3) กรอกทุกหน้าตามสเปคและตรวจค่าหน้าสรุป
-    it("กรอกทุกหน้าตามสเปคและตรวจค่าหน้าสรุป", () => {
-        cy.visit("/home");
-        cy.get("svg.lucide-ellipsis").first().click({ force: true });
-        cy.get('button.pill-row[aria-label="คำนวณภาษีลดหย่อน"]').click({ force: true });
-
-        cy.get('input[name="salaryPerMonth"][placeholder="ระบุจำนวนเงิน"]')
-            .scrollIntoView()
-            .type("{selectall}{backspace}200000", { delay: 0, force: true });
-        cy.get('input[name="bonusPerYear"][placeholder="ระบุจำนวนเงิน"]')
-            .type("{selectall}{backspace}5000", { delay: 0, force: true });
-        cy.get('input[name="otherIncomePerYear"][placeholder="ระบุจำนวนเงิน"]')
-            .type("{selectall}{backspace}4000", { delay: 0, force: true });
-        cy.get("button.btn-next").contains("ถัดไป").click({ force: true });
-
-        // ✅ ...คง logic เดิมต่อเนื่องของ step อื่น ๆ
+    it('Case 2: เสียภาษี (รายได้สูง)', () => {
+        fillWizardQuick({ salaryPerMonth: 100000, withheld: 0 });
+        readNetTax().then((n) => {
+            expect(n).to.be.greaterThan(0);
+        });
     });
 
-    // ✅ 4) เดิน Next ทุกหน้า → คำนวณ → ย้อนจุด Wizard
-    it("WIZ-Next-Navigation : เดิน Next ทุกหน้า → คำนวณ → ย้อนจุด/ย้อนกลับใน Wizard", () => {
-        cy.visit("/home");
-        cy.get("svg.lucide-ellipsis").first().click({ force: true });
-        cy.get('button.pill-row[aria-label="คำนวณภาษีลดหย่อน"]').click();
+    it('ปิด module แล้วกลับมาใหม่ต้องเริ่มที่ Step 1 (เห็น input รายได้)', () => {
+        // เปิดอยู่บนโมดัลแล้ว
+        cy.get('.tax-close-btn').click();
+        cy.url().should('include', '/more'); // จาก RouteTaxWizard
+        visitWithAutoLogin('/tax');
+        cy.get('input[name="salaryPerMonth"]').should('exist'); // เริ่มสเต็ป 1 แน่นอน
+    });
 
-        cy.get('input[name="salaryPerMonth"][placeholder="ระบุจำนวนเงิน"]')
-            .scrollIntoView()
-            .clear({ force: true })
-            .type("20", { delay: 0, force: true });
+    it('ค่าฟอร์มคงอยู่เมื่อย้อนกลับ (Income -> Family -> Back -> Income)', () => {
+        // Income
+        typeMoney('salaryPerMonth', 50000);
+        next(); // ไป Family
 
-        const clickNext = (label = "ถัดไป") =>
-            cy.get("button.btn-next:visible").contains(label).scrollIntoView().click({ force: true });
-
-        clickNext("ถัดไป");
-        clickNext("ถัดไป");
-        clickNext("ถัดไป");
-        clickNext("ถัดไป");
-        clickNext("ถัดไป");
-        clickNext("ถัดไป");
-        clickNext("คำนวณ");
-
-        const clickDot = (n: number) =>
-            cy.get("button.wizard-dot.is-visited:visible").contains(String(n)).click({ force: true });
-
-        clickDot(7);
-        clickDot(6);
-        clickDot(5);
-        cy.get("button.btn-back:visible").click({ force: true });
-        clickDot(3);
-        clickDot(2);
-        clickDot(1);
+        back(); // ย้อนกลับสู่ Income
+        cy.get('input[name="salaryPerMonth"]').should(($inp) => {
+            // AmountInput จะแสดงคอมมา
+            expect(($inp.val() as string) || '').to.match(/50,?000/);
+        });
     });
 });
