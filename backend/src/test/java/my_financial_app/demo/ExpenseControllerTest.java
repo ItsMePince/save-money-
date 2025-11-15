@@ -127,7 +127,16 @@ class ExpenseControllerTest {
 
     @Test
     void create_unauthorized_whenNoSession() throws Exception {
-        mvc.perform(post("/api/expenses"))
+        mvc.perform(post("/api/expenses")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+        {
+            "type": "EXPENSE",
+            "category": "อาหาร",
+            "amount": 100,
+            "occurredAt": "2025-01-01T00:00:00"
+        }
+        """))
                 .andExpect(status().isUnauthorized());
     }
 
