@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -37,11 +36,12 @@ public class ExpenseController {
 
     @PostMapping
     public ResponseEntity<?> create(
-            @Valid @RequestBody CreateExpenseRequest req,
-            HttpServletRequest request
+            HttpServletRequest request,
+            @Valid @RequestBody CreateExpenseRequest req
     ) {
-        User owner = requireLoginUser(request);
-        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+        User owner = requireLoginUserEarly(request);
+        if (owner == null)
+            return ResponseEntity.status(401).body("Unauthorized");
 
         Expense e = new Expense();
         e.setUser(owner);
@@ -62,7 +62,7 @@ public class ExpenseController {
             HttpServletRequest request
     ) {
         req.type = "INCOME";
-        return create(req, request);
+        return create(request, req);
     }
 
     @PostMapping("/spendings")
@@ -71,13 +71,14 @@ public class ExpenseController {
             HttpServletRequest request
     ) {
         req.type = "EXPENSE";
-        return create(req, request);
+        return create(request, req);
     }
 
     @GetMapping
     public ResponseEntity<?> listMine(HttpServletRequest request) {
         User owner = requireLoginUser(request);
-        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+        if (owner == null)
+            return ResponseEntity.status(401).body("Unauthorized");
         return ResponseEntity.ok(repo.findByUserIdOrderByOccurredAtDesc(owner.getId()));
     }
 
@@ -88,7 +89,8 @@ public class ExpenseController {
             HttpServletRequest request
     ) {
         User owner = requireLoginUser(request);
-        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+        if (owner == null)
+            return ResponseEntity.status(401).body("Unauthorized");
 
         LocalDate s = LocalDate.parse(start);
         LocalDate e = LocalDate.parse(end);
@@ -107,10 +109,12 @@ public class ExpenseController {
             HttpServletRequest request
     ) {
         User owner = requireLoginUser(request);
-        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+        if (owner == null)
+            return ResponseEntity.status(401).body("Unauthorized");
 
         Optional<Expense> opt = repo.findByIdAndUserId(id, owner.getId());
-        if (opt.isEmpty()) return ResponseEntity.status(404).body("Not found");
+        if (opt.isEmpty())
+            return ResponseEntity.status(404).build();
 
         Expense e = opt.get();
         e.setType(normalizeType(req.type));
@@ -127,11 +131,23 @@ public class ExpenseController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteOne(@PathVariable Long id, HttpServletRequest request) {
         User owner = requireLoginUser(request);
-        if (owner == null) return ResponseEntity.status(401).body("Unauthorized");
+        if (owner == null)
+            return ResponseEntity.status(401).body("Unauthorized");
+
         Optional<Expense> opt = repo.findByIdAndUserId(id, owner.getId());
-        if (opt.isEmpty()) return ResponseEntity.status(404).body("Not found");
+        if (opt.isEmpty())
+            return ResponseEntity.status(404).body("Not found");
+
         repo.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private User requireLoginUserEarly(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) return null;
+        Object username = session.getAttribute("username");
+        if (username == null) return null;
+        return userRepo.findByUsername(username.toString()).orElse(null);
     }
 
     private User requireLoginUser(HttpServletRequest request) {
@@ -144,9 +160,11 @@ public class ExpenseController {
     private static Expense.EntryType normalizeType(String raw) {
         if (raw == null) return Expense.EntryType.EXPENSE;
         String s = raw.trim().toLowerCase(Locale.ROOT);
-        if (s.equals("รายได้") || s.equals("income") || s.equals("incomes")) return Expense.EntryType.INCOME;
+        if (s.equals("รายได้") || s.equals("income") || s.equals("incomes"))
+            return Expense.EntryType.INCOME;
         if (s.equals("ค่าใช้จ่าย") || s.equals("expense") || s.equals("expenses")
-                || s.equals("spending") || s.equals("spendings")) return Expense.EntryType.EXPENSE;
+                || s.equals("spending") || s.equals("spendings"))
+            return Expense.EntryType.EXPENSE;
         return Expense.EntryType.EXPENSE;
     }
 }
