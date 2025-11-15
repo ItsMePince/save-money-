@@ -2,10 +2,11 @@ name: CI - Backend + Frontend + Cypress + Docker
 
 on:
   push:
-    branches: [ main ]
+    branches: [ pince3 ]
   pull_request:
-    branches: [ main ]
+    branches: [ pince3 ]
 
+  workflow_dispatch:
 jobs:
 
   # ================================
