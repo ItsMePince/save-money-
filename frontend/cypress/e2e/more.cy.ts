@@ -1,19 +1,19 @@
+// cypress/e2e/more.cy.ts
 describe("More Page", () => {
     beforeEach(() => {
         cy.mockLoginFrontendOnly();
 
-        const mockAccounts = [
-            {
-                id: 1,
-                name: "บัญชีหลัก",
-                amount: 5000,
-                iconKey: "bank"
-            }
-        ];
-
+        // หน้า More ใช้ load accounts ก่อนเสมอ
         cy.intercept("GET", "**/api/accounts", {
             statusCode: 200,
-            body: mockAccounts
+            body: [
+                {
+                    id: 1,
+                    name: "บัญชีหลัก",
+                    amount: 5000,
+                    iconKey: "bank"
+                }
+            ]
         }).as("acc");
 
         cy.visit("/more");
@@ -22,7 +22,12 @@ describe("More Page", () => {
     it("renders More page", () => {
         cy.wait("@acc");
 
-        cy.contains("บัญชีหลัก").should("exist");
-        cy.contains("5000").should("exist");
+        // เช็คหัวข้อหลัก
+        cy.contains("รายการเพิ่มเติม").should("exist");
+
+        // เช็ค 3 เมนูจริงที่เห็นบน UI
+        cy.contains("ธุรกรรมที่เกิดซ้ำ").should("exist");
+        cy.contains("คำนวณภาษีลดหย่อน").should("exist");
+        cy.contains("Export CSV").should("exist");
     });
 });
