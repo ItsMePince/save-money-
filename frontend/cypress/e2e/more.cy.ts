@@ -1,20 +1,27 @@
-/// <reference types="cypress" />
-
-describe("More Page", () => {
+describe('More Page', () => {
 
     beforeEach(() => {
-        cy.mockLoginFrontendOnly("admin");
+        cy.mockLoginFrontendOnly('admin');
 
-        cy.intercept("GET", "**/api/accounts", {
+        cy.intercept('GET', '**/api/accounts', {
             statusCode: 200,
             body: [
-                { id: 1, name: "บัญชีหลัก", amount: 4500 }
+                {
+                    id: 1,
+                    name: 'บัญชีหลัก',
+                    amount: 5000,
+                    iconKey: 'bank'
+                }
             ]
-        });
+        }).as('acc');
+
+        cy.visit('/more');
+        cy.wait('@acc');
     });
 
-    it("renders More page", () => {
-        cy.visit("/more");
-        cy.contains("บัญชีหลัก").should("be.visible");
+    it('renders More page', () => {
+        cy.contains('บัญชีหลัก').should('exist');
+        cy.contains('5000').should('exist');
     });
+
 });
