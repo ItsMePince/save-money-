@@ -37,7 +37,7 @@ public class ExpenseController {
     @PostMapping
     public ResponseEntity<?> create(
             HttpServletRequest request,
-            @Valid @RequestBody CreateExpenseRequest req
+            @RequestBody CreateExpenseRequest req
     ) {
         User owner = requireLoginUserEarly(request);
         if (owner == null)
