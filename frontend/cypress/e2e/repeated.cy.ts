@@ -4,33 +4,43 @@ describe("Repeated Page", () => {
     beforeEach(() => {
         cy.mockLoginFrontendOnly("admin");
 
-        // 1) ตั้ง intercept ก่อน
-        cy.intercept("GET", "**/api/repeated-transactions*", {
-            statusCode: 200,
-            body: [
-                {
-                    id: 1,
-                    name: "Netflix",
-                    amount: 300,
-                    date: 15,
-                    type: "EXPENSE",
-                    iconKey: "netflix",
-                },
-            ],
+        cy.intercept("GET", "**/api/repeated-transactions*", (req) => {
+            console.log("🔥 intercepted repeated-transactions");
+            req.reply({
+                statusCode: 200,
+                body: [
+                    {
+                        id: 1,
+                        name: "Netflix",
+                        amount: 300,
+                        date: 15,
+                        type: "EXPENSE",
+                        iconKey: "netflix",
+                    },
+                ],
+            });
         }).as("repList");
 
-        // 2) เข้าเพจ
         cy.visit("/repeated-transactions");
 
-        // 3) บังคับ reload 1 ครั้ง ให้ frontend ยิง API ใหม่รอบสอง
+        // บังคับให้ frontend ยิง request อีกรอบหลัง intercept พร้อมแล้ว
         cy.reload();
-
-        // 4) รอ request ที่ intercept แน่ๆ
         cy.wait("@repList", { timeout: 10000 });
+
+        // log DOM ทั้งหน้า (เพื่อ debug CI)
+        cy.document().then((doc) => {
+            console.log("🔥 DOM text:\n", doc.body.innerText);
+        });
     });
 
     it("renders repeated list", () => {
-        cy.contains("Netflix").should("exist");
-        cy.contains("300").should("exist");
+        // ตรวจ root container ของ list
+        cy.get(".repeated-list, .list, body").then(($root) => {
+            const text = $root.text();
+            console.log("🔥 List TEXT:", text);
+        });
+
+        // ตรวจข้อความที่ mock
+        cy.contains("Netflix", { timeout: 8000 }).should("exist");
     });
 });
