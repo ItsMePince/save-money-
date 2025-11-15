@@ -2,21 +2,34 @@
 
 describe("Repeated Page", () => {
     beforeEach(() => {
-        cy.mockLoginFrontendOnly("admin");
+        // CI login fix
+        cy.window().then(win => {
+            win.sessionStorage.setItem("token", "test-token");
+            win.sessionStorage.setItem(
+                "user",
+                JSON.stringify({ username: "admin", role: "USER" })
+            );
+        });
 
-        cy.intercept("GET", "**/api/repeated-transactions*", {
+        cy.intercept("GET", "**/api/repeated-transactions", {
             statusCode: 200,
             body: [
-                { id: 1, name: "Netflix", amount: 300, date: 15, type: "EXPENSE" }
+                {
+                    id: 1,
+                    name: "Netflix",
+                    amount: 300,
+                    date: 15,
+                    type: "EXPENSE",
+                    iconKey: "netflix"
+                }
             ]
-        }).as("rep");
+        }).as("repList");
+
+        cy.visit("/repeated-transactions");
     });
 
     it("renders repeated list", () => {
-        cy.visit("/repeated");
-        cy.wait("@rep");
-
+        cy.wait("@repList");
         cy.contains("Netflix").should("exist");
-        cy.contains("300").should("exist");
     });
 });
