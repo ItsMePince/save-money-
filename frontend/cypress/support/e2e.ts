@@ -1,7 +1,6 @@
 import './commands'
 import '@testing-library/cypress/add-commands'
 
-
 beforeEach(() => {
     cy.mockLoginFrontendOnly();
 
@@ -39,8 +38,24 @@ beforeEach(() => {
         }
     ];
 
-    cy.intercept("GET", "**/api/accounts", { statusCode: 200, body: mockAccounts }).as("acc");
-    cy.intercept("GET", "**/api/expenses*", { statusCode: 200, body: mockExpenses }).as("exp");
-    cy.intercept("GET", "**/api/expenses/range*", { statusCode: 200, body: mockExpenses }).as("range");
-    cy.intercept("GET", "**/api/repeated-transactions", { statusCode: 200, body: mockRepeated }).as("rep");
+    // 🔥 ตั้ง alias ให้ตรงกับไฟล์ test ทุกรูปแบบ
+    cy.intercept("GET", "**/api/accounts*", {
+        statusCode: 200,
+        body: mockAccounts
+    }).as("getAccounts");
+
+    cy.intercept("GET", "**/api/expenses*", {
+        statusCode: 200,
+        body: mockExpenses
+    }).as("getExpenses");
+
+    cy.intercept("GET", "**/api/expenses/range*", {
+        statusCode: 200,
+        body: mockExpenses
+    }).as("getRange");
+
+    cy.intercept("GET", "**/api/repeated-transactions*", {
+        statusCode: 200,
+        body: mockRepeated
+    }).as("getRepeated");
 });
