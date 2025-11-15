@@ -1,9 +1,14 @@
-import './commands'
-import '@testing-library/cypress/add-commands'
+// cypress/support/e2e.ts
+import './commands';
+import '@testing-library/cypress/add-commands';
 
 beforeEach(() => {
+    // ⭐ ใช้ session mock จาก commands.ts (ไม่ต้อง login จริง)
     cy.mockLoginFrontendOnly();
 
+    // -------------------------------
+    // ⭐ Mock data (ใช้เป็นค่าเดียวกันทุกหน้า)
+    // -------------------------------
     const mockExpenses = [
         {
             id: 1,
@@ -38,24 +43,28 @@ beforeEach(() => {
         }
     ];
 
-    // 🔥 ตั้ง alias ให้ตรงกับไฟล์ test ทุกรูปแบบ
-    cy.intercept("GET", "**/api/accounts*", {
-        statusCode: 200,
-        body: mockAccounts
-    }).as("getAccounts");
+    // -------------------------------
+    // ⭐ FIX ตัวหลัก — intercept ครบทุก route ที่เว็บใช้จริง
+    //    (นี่คือส่วนที่ทำให้ CI ผ่าน)
+    // -------------------------------
 
-    cy.intercept("GET", "**/api/expenses*", {
-        statusCode: 200,
-        body: mockExpenses
-    }).as("getExpenses");
+    // Accounts
+    cy.intercept("GET", "**/api/accounts*", mockAccounts).as("acc");
 
-    cy.intercept("GET", "**/api/expenses/range*", {
-        statusCode: 200,
-        body: mockExpenses
-    }).as("getRange");
+    // Expenses (หลายแบบตามหน้าเว็บ)
+    cy.intercept("GET", "**/api/expenses", mockExpenses).as("expRoot");      // /api/expenses
+    cy.intercept("GET", "**/api/expenses?date=*", mockExpenses).as("expDay"); // /api/expenses?date=
+    cy.intercept("GET", "**/api/expenses/*", mockExpenses).as("expSub");      // /api/expenses/<anything>
+    cy.intercept("GET", "**/api/expenses/range*", mockExpenses).as("range");  // /api/expenses/range?start=
+    cy.intercept("GET", "**/api/expenses/all*", mockExpenses).as("expAll");   // /api/expenses/all (More page)
 
-    cy.intercept("GET", "**/api/repeated-transactions*", {
-        statusCode: 200,
-        body: mockRepeated
-    }).as("getRepeated");
+    // Repeated transactions
+    cy.intercept("GET", "**/api/repeated-transactions*", mockRepeated).as("rep");
+
+    // -------------------------------
+    // ⭐ ป้องกันการ request จริงทั้งหมดระหว่างรัน CI
+    // -------------------------------
+    cy.intercept("POST", "**/api/**", { statusCode: 200, body: { ok: true } });
+    cy.intercept("PUT", "**/api/**", { statusCode: 200, body: { ok: true } });
+    cy.intercept("DELETE", "**/api/**", { statusCode: 200, body: { ok: true } });
 });
