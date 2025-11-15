@@ -15,6 +15,7 @@ import "./month.css";
 
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import BottomNav from "./buttomnav";
+import { API_BASE } from "../lib/api";
 
 export type Transaction = {
     id: string;
@@ -32,11 +33,6 @@ type ApiRepeatedTransaction = {
     date: string;
     frequency: string;
 }
-
-const API_BASE =
-    (import.meta as any)?.env?.VITE_API_BASE ||
-    (import.meta as any)?.env?.REACT_APP_API_BASE ||
-    "http://localhost:8081";
 
 const thMonths = [
     "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
@@ -115,12 +111,12 @@ export default function Month() {
 
                 const userId = getCurrentUserId();
 
-                const expensesUrl = new URL(`${API_BASE}/api/expenses/range`);
+                const expensesUrl = new URL(`${API_BASE}/expenses/range`, window.location.origin);
                 expensesUrl.searchParams.set("start", startISO);
                 expensesUrl.searchParams.set("end", endISO);
                 if (userId != null) expensesUrl.searchParams.set("userId", String(userId));
 
-                const repeatedUrl = `${API_BASE}/api/repeated-transactions`;
+                const repeatedUrl = `${API_BASE}/repeated-transactions`;
 
                 const [resExpenses, resRepeated] = await Promise.all([
                     fetch(expensesUrl.toString(), {

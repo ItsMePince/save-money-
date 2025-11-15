@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import BottomNav from "./buttomnav";
+import { API_BASE } from "../lib/api";
 
 type ExpenseDTO = {
     id: number;
@@ -191,11 +192,6 @@ function mapRepeatedToExpenseDTO(rt: ApiRepeatedTransaction): ExpenseDTO {
     }
 }
 
-const API_BASE =
-    (import.meta as any)?.env?.VITE_API_BASE ||
-    (import.meta as any)?.env?.REACT_APP_API_BASE ||
-    "http://localhost:8081";
-
 const iso = (d: Date) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -236,8 +232,8 @@ export default function Day() {
                 setError(null);
 
                 const dayISO = iso(anchor);
-                const expensesUrl = `${API_BASE}/api/expenses/range?start=${dayISO}&end=${dayISO}`;
-                const repeatedUrl = `${API_BASE}/api/repeated-transactions`;
+                const expensesUrl = `${API_BASE}/expenses/range?start=${dayISO}&end=${dayISO}`;
+                const repeatedUrl = `${API_BASE}/repeated-transactions`;
 
                 const [resExpenses, resRepeated] = await Promise.all([
                     fetch(expensesUrl, {

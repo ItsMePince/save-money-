@@ -1,7 +1,7 @@
 // src/pages/location.tsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./location.css";
+import "./Location.css";
 
 type Place = {
     label: string;
@@ -198,7 +198,6 @@ export default function Location() {
                     </svg>
                 </button>
             </div>
-
             <div className="map-box">
                 {loadingMap && <div className="map-loading">กำลังโหลดแผนที่…</div>}
                 <div ref={mapEl} className="map-host" />

@@ -20,8 +20,7 @@ import { useTempCategory } from "../TempCategoryContext";
 import { usePaymentMethod } from "../PaymentMethodContext";
 import { useEditPrefill } from "../hooks/useEditPrefill";
 import { CUSTOM_ICONS as OUTCOME_ICON_MAP } from "./customoutcome";
-
-const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
+import { API_BASE } from "../lib/api";
 
 const DRAFT_KEY = "expense_draft_v2";
 const safeParse = (raw: any) => { try { return JSON.parse(raw ?? ""); } catch { return {}; } };
@@ -136,13 +135,31 @@ export default function Expense() {
     useEffect(() => { setHydrated(true); }, []);
 
     useEditPrefill((d) => {
-        setCategory((d.category as Category) ?? "อื่นๆ");
+        const builtins: Category[] = ["อาหาร", "ค่าเดินทาง", "ของขวัญ"];
+
+        if (builtins.includes(d.category as Category)) {
+            setCategory(d.category as Category);
+            try {
+                sessionStorage.removeItem("customOutcome");
+                sessionStorage.removeItem("customOutcomeLabel");
+                sessionStorage.removeItem("customOutcomeIcon");
+            } catch {}
+        } else {
+            setCategory("อื่นๆ");
+            try {
+                if (d.category) sessionStorage.setItem("customOutcomeLabel", d.category);
+                if (d.iconKey) sessionStorage.setItem("customOutcomeIcon", d.iconKey);
+                sessionStorage.setItem("customOutcome", JSON.stringify({ label: d.category, icon: d.iconKey }));
+            } catch {}
+        }
+
         setAmount(String(d.amount ?? "0"));
         setNote(d.note ?? "");
         setPlace(d.place ?? "");
         setDt(d.datetime || `${d.date}T${getNowHHMM()}`);
         if (d.paymentMethod) setPayment({ name: d.paymentMethod });
     }, "edit_id_expense");
+
 
     useEffect(() => {
         const apply = () => {
@@ -247,7 +264,7 @@ export default function Expense() {
         const iconKey =
             category === "อื่นๆ"
                 ? (customOutcomeIconName || tempCategory?.iconKey || "more")
-                : defaultIconKeyByCategory[category];
+                : (defaultIconKeyByCategory[category] || "more");
 
         const occurredAtISO = `${dt}:00`;
 
@@ -264,7 +281,7 @@ export default function Expense() {
 
         const editId = sessionStorage.getItem("edit_id_expense");
         const isEdit = !!editId;
-        const url = isEdit ? `${API_BASE}/api/expenses/${editId}` : `${API_BASE}/api/expenses`;
+        const url = isEdit ? `${API_BASE}/expenses/${editId}` : `${API_BASE}/expenses`;
         const method = isEdit ? "PUT" : "POST";
 
         try {
