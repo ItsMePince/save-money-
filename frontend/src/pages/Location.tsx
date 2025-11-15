@@ -115,11 +115,11 @@ export default function Location() {
                 if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(
                         (pos) => onReady(pos.coords.latitude, pos.coords.longitude),
-                        () => onReady(13.736717, 100.523186),
+                        () => onReady(13.7934, 100.3229),
                         { enableHighAccuracy: true, timeout: 7000 }
                     );
                 } else {
-                    onReady(13.736717, 100.523186);
+                    onReady(13.7934, 100.3229);
                 }
             } catch {
                 setLoadingMap(false);
@@ -211,7 +211,12 @@ export default function Location() {
                     return (
                         <button
                             key={`${s.lat}-${s.lon}-${i}`}
-                            className="place-row"
+                            className={
+                                "place-row" +
+                                (picked && picked.lat === s.lat && picked.lon === s.lon
+                                    ? " place-row--active"
+                                    : "")
+                            }
                             onClick={() => moveTo(s)}
                             style={{ padding: "8px 6px" }}
                         >
@@ -226,7 +231,6 @@ export default function Location() {
                                     </div>
                                 </div>
                             </div>
-                            <span className="more">⋯</span>
                         </button>
                     );
                 })}
@@ -242,7 +246,12 @@ export default function Location() {
                             return (
                                 <button
                                     key={`ov-${s.lat}-${s.lon}-${i}`}
-                                    className="place-row overlay"
+                                    className={
+                                        "place-row overlay" +
+                                        (picked && picked.lat === s.lat && picked.lon === s.lon
+                                            ? " place-row--active"
+                                            : "")
+                                    }
                                     onClick={() => moveTo(s)}
                                     style={{ padding: "12px 12px" }}
                                 >
