@@ -1,7 +1,7 @@
-const API_BASE =
-    (import.meta as any)?.env?.VITE_API_BASE ||
-    (import.meta as any)?.env?.REACT_APP_API_BASE ||
-    "http://localhost:8081";
+export const API_BASE =
+    import.meta.env.VITE_API_BASE ||
+    (window.location.hostname === "localhost" ? "http://localhost:8081/api" : "/api");
+
 
 export type ExpenseDTO = {
     id: number;
@@ -59,11 +59,11 @@ function mapRepeatedToExpenseDTO(rt: ApiRepeatedTransaction): ExpenseDTO {
 
 export async function fetchAllTransactions(): Promise<ExpenseDTO[]> {
     const [resExpenses, resRepeated] = await Promise.all([
-        fetch(`${API_BASE}/api/expenses`, {
+        fetch(`${API_BASE}/expenses`, {
             headers: { Accept: "application/json" },
             credentials: "include",
         }),
-        fetch(`${API_BASE}/api/repeated-transactions`, {
+        fetch(`${API_BASE}/repeated-transactions`, {
             headers: { Accept: "application/json" },
             credentials: "include",
         })

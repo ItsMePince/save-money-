@@ -15,6 +15,7 @@ import BottomNav from "./buttomnav";
 import "./buttomnav.css";
 import { useNavigate } from "react-router-dom";
 import { fetchAllTransactions, ExpenseDTO } from "../lib/api";
+import { API_BASE } from "../lib/api";
 
 type Item = {
     id: number;
@@ -334,13 +335,9 @@ export default function Summary() {
 
     const tryDeleteEndpoints = async (id: number, note: string | undefined) => {
         const isRepeated = note?.includes("(ซ้ำ:");
-        const API_BASE =
-            (import.meta as any)?.env?.VITE_API_BASE ||
-            (import.meta as any)?.env?.REACT_APP_API_BASE ||
-            "http://localhost:8081";
         const url = isRepeated
-            ? `${API_BASE}/api/repeated-transactions/${id}`
-            : `${API_BASE}/api/expenses/${id}`;
+            ? `${API_BASE}/repeated-transactions/${id}`
+            : `${API_BASE}/expenses/${id}`;
         const res = await fetch(url, { method: "DELETE", credentials: "include" });
         return res.ok;
     };

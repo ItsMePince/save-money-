@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "./accountnew.css";
 import { Building2, Banknote, Landmark, CreditCard, Wallet, PiggyBank, Coins } from "lucide-react";
 import BottomNav from "./buttomnav";
+import { API_BASE } from "../lib/api";
 
 type AccountType = "เงินสด" | "ธนาคาร" | "บัตรเครดิต";
 const ACCOUNT_TYPES: AccountType[] = ["เงินสด", "ธนาคาร", "บัตรเครดิต"];
@@ -113,7 +114,7 @@ export default function AccountNew() {
 
         const isEditMode = editState?.mode === 'edit';
 
-        let url = "http://localhost:8081/api/accounts";
+        let url = `${API_BASE}/accounts`;
         let method = "POST";
 
         if (isEditMode) {
@@ -122,7 +123,7 @@ export default function AccountNew() {
                 alert("เกิดข้อผิดพลาด: ไม่พบ ID ของบัญชีที่ต้องการแก้ไข");
                 return;
             }
-            url = `http://localhost:8081/api/accounts/${accountId}`;
+            url = `${API_BASE}/accounts/${accountId}`;
             method = "PUT";
         }
 

@@ -18,8 +18,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePaymentMethod } from "../PaymentMethodContext";
 import { useEditPrefill } from "../hooks/useEditPrefill";
-
-const API_BASE = (import.meta.env.VITE_API_BASE as string) || "http://localhost:8081";
+import { API_BASE } from "../lib/api";
 
 const ChevronDown = () => (
     <svg viewBox="0 0 24 24" className="icon">
@@ -236,7 +235,7 @@ export default function Income() {
 
         const editId = sessionStorage.getItem("edit_id_income");
         const isEdit = !!editId;
-        const url = isEdit ? `${API_BASE}/api/expenses/${editId}` : `${API_BASE}/api/expenses`;
+        const url = isEdit ? `${API_BASE}/expenses/${editId}` : `${API_BASE}/expenses`;
         const method = isEdit ? "PUT" : "POST";
 
         try {

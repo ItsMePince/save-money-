@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./Login.css";
+import { API_BASE } from "../lib/api";
 
 interface LoginProps {
     onLoginSuccess?: (user: { username: string; role: string }) => void;
 }
-
-const API_BASE = (import.meta as any)?.env?.VITE_API_BASE ?? "http://localhost:8081";
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const [username, setUsername] = useState("");
@@ -49,12 +48,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         setError("");
 
         try {
-            const res = await fetch(`${API_BASE}/api/auth/login`, {
+            const res = await fetch(`${API_BASE}/auth/login`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({ username, password }),
             });

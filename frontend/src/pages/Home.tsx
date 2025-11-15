@@ -10,11 +10,7 @@ import {
 } from "lucide-react";
 import { CUSTOM_ICONS as CUSTOM_INCOME_ICONS } from "./customincome";
 import { CUSTOM_ICONS as CUSTOM_OUTCOME_ICONS } from "./customoutcome";
-
-const API_BASE =
-    (import.meta as any)?.env?.VITE_API_BASE ||
-    (import.meta as any)?.env?.REACT_APP_API_BASE ||
-    "http://localhost:8081";
+import { API_BASE } from "../lib/api";
 
 type ExpenseDTO = {
     id: number;
@@ -203,7 +199,7 @@ export default function Home() {
 
     const fetchAccounts = async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/accounts`, {
+            const res = await fetch(`${API_BASE}/accounts`, {
                 headers: { Accept: "application/json" },
                 credentials: "include",
             });
@@ -232,11 +228,11 @@ export default function Home() {
             try {
                 setLatestLoading(true);
                 const [resExpenses, resRepeated] = await Promise.all([
-                    fetch(`${API_BASE}/api/expenses`, {
+                    fetch(`${API_BASE}/expenses`, {
                         headers: { Accept: "application/json" },
                         credentials: "include",
                     }),
-                    fetch(`${API_BASE}/api/repeated-transactions`, {
+                    fetch(`${API_BASE}/repeated-transactions`, {
                         headers: { Accept: "application/json" },
                         credentials: "include",
                     })
@@ -291,7 +287,7 @@ export default function Home() {
         if (!window.confirm(`ลบบัญชี “${acc.name}” ใช่ไหม?`)) return;
 
         try {
-            const res = await fetch(`${API_BASE}/api/accounts/${id}`, {
+            const res = await fetch(`${API_BASE}/accounts/${id}`, {
                 method: "DELETE",
                 credentials: "include",
             });
@@ -328,11 +324,11 @@ export default function Home() {
             const { start, end } = monthRangeISO(year, month);
 
             const [resExpenses, resRepeated] = await Promise.all([
-                fetch(`${API_BASE}/api/expenses/range?start=${start}&end=${end}`, {
+                fetch(`${API_BASE}/expenses/range?start=${start}&end=${end}`, {
                     headers: { Accept: "application/json" },
                     credentials: "include",
                 }),
-                fetch(`${API_BASE}/api/repeated-transactions`, {
+                fetch(`${API_BASE}/repeated-transactions`, {
                     headers: { Accept: "application/json" },
                     credentials: "include",
                 })
