@@ -4,12 +4,7 @@ describe("Repeated Page", () => {
     beforeEach(() => {
         cy.mockLoginFrontendOnly("admin");
 
-        cy.visit("/repeated-transactions");
-
-        // รอให้หน้า mount ก่อน (สำคัญมากสำหรับ CI)
-        cy.wait(300);
-
-        // override API หลังหน้าโหลดแล้ว
+        // 1) ตั้ง intercept ก่อน
         cy.intercept("GET", "**/api/repeated-transactions*", {
             statusCode: 200,
             body: [
@@ -19,14 +14,22 @@ describe("Repeated Page", () => {
                     amount: 300,
                     date: 15,
                     type: "EXPENSE",
-                    iconKey: "netflix"
-                }
-            ]
+                    iconKey: "netflix",
+                },
+            ],
         }).as("repList");
+
+        // 2) เข้าเพจ
+        cy.visit("/repeated-transactions");
+
+        // 3) บังคับ reload 1 ครั้ง ให้ frontend ยิง API ใหม่รอบสอง
+        cy.reload();
+
+        // 4) รอ request ที่ intercept แน่ๆ
+        cy.wait("@repList", { timeout: 10000 });
     });
 
     it("renders repeated list", () => {
-        cy.wait("@repList", { timeout: 8000 });
         cy.contains("Netflix").should("exist");
         cy.contains("300").should("exist");
     });
