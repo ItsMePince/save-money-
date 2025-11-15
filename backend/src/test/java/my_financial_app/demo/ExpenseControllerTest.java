@@ -20,7 +20,6 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -111,8 +110,7 @@ class ExpenseControllerTest {
     @Test
     void create_unauthorized_whenNoSession() throws Exception {
         mvc.perform(post("/api/expenses")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(Map.of())))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -214,12 +212,21 @@ class ExpenseControllerTest {
         Mockito.when(userRepository.findByUsername("ken")).thenReturn(Optional.of(user));
         Mockito.when(expenseRepository.findByIdAndUserId(999L, 1L)).thenReturn(Optional.empty());
 
+        var body = Map.of(
+                "type","ค่าใช้จ่าย",
+                "category","อาหาร",
+                "amount",10.0,
+                "occurredAt","2025-01-01T00:00:00",
+                "note","n",
+                "place","p",
+                "paymentMethod","CASH",
+                "iconKey","food"
+        );
+
         mvc.perform(put("/api/expenses/999")
                         .session(sessionAs("ken"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(Map.of(
-                                "type","ค่าใช้จ่าย","category","อาหาร","amount",10.0,"occurredAt","2025-01-01T00:00:00"
-                        ))))
+                        .content(toJson(body)))
                 .andExpect(status().isNotFound());
     }
 
@@ -234,13 +241,21 @@ class ExpenseControllerTest {
         var saved = mkExpense(5L, user, Expense.EntryType.EXPENSE, "อาหาร", 99, LocalDateTime.parse("2025-01-10T00:00:00"));
         Mockito.when(expenseRepository.save(ArgumentMatchers.any(Expense.class))).thenReturn(saved);
 
+        var body = Map.of(
+                "type","ค่าใช้จ่าย",
+                "category","อาหาร",
+                "amount",99.0,
+                "occurredAt","2025-01-10T00:00:00",
+                "note","n",
+                "place","p",
+                "paymentMethod","CASH",
+                "iconKey","food"
+        );
+
         mvc.perform(put("/api/expenses/5")
                         .session(sessionAs("ken"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(toJson(Map.of(
-                                "type","ค่าใช้จ่าย","category","อาหาร","amount",99.0,"occurredAt","2025-01-10T00:00:00",
-                                "note","n","place","p","paymentMethod","CASH","iconKey","food"
-                        ))))
+                        .content(toJson(body)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(5));
     }
