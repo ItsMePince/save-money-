@@ -1,27 +1,28 @@
-describe('More Page', () => {
-
+describe("More Page", () => {
     beforeEach(() => {
-        cy.mockLoginFrontendOnly('admin');
+        cy.mockLoginFrontendOnly();
 
-        cy.intercept('GET', '**/api/accounts', {
+        const mockAccounts = [
+            {
+                id: 1,
+                name: "บัญชีหลัก",
+                amount: 5000,
+                iconKey: "bank"
+            }
+        ];
+
+        cy.intercept("GET", "**/api/accounts", {
             statusCode: 200,
-            body: [
-                {
-                    id: 1,
-                    name: 'บัญชีหลัก',
-                    amount: 5000,
-                    iconKey: 'bank'
-                }
-            ]
-        }).as('acc');
+            body: mockAccounts
+        }).as("acc");
 
-        cy.visit('/more');
-        cy.wait('@acc');
+        cy.visit("/more");
     });
 
-    it('renders More page', () => {
-        cy.contains('บัญชีหลัก').should('exist');
-        cy.contains('5000').should('exist');
-    });
+    it("renders More page", () => {
+        cy.wait("@acc");
 
+        cy.contains("บัญชีหลัก").should("exist");
+        cy.contains("5000").should("exist");
+    });
 });

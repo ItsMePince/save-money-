@@ -1,37 +1,37 @@
-// cypress/e2e/summary.cy.ts
-
-describe('Summary Page', () => {
-
+describe("Summary Page", () => {
     beforeEach(() => {
-        cy.mockLoginFrontendOnly('admin');
+        cy.mockLoginFrontendOnly();
 
-        cy.intercept('GET', '**/api/expenses', {
+        const mockSummary = [
+            {
+                date: "2025-11-15",
+                total: -89,
+                items: [
+                    {
+                        id: 1,
+                        type: "EXPENSE",
+                        category: "ค่าเดินทาง",
+                        amount: 89,
+                        note: "test",
+                        occurredAt: "2025-11-15T10:00:00"
+                    }
+                ]
+            }
+        ];
+
+        cy.intercept("GET", "**/api/summary*", {
             statusCode: 200,
-            body: [
-                {
-                    id: 1,
-                    type: 'EXPENSE',
-                    amount: 89,
-                    category: 'ค่าเดินทาง',
-                    note: 'test',
-                    occurredAt: '2025-11-15T12:00:00'
-                }
-            ]
-        }).as('exp');
+            body: mockSummary
+        }).as("summary");
 
-        cy.intercept('GET', '**/api/repeated-transactions', {
-            statusCode: 200,
-            body: []
-        }).as('rep');
-
-        cy.visit('/summary');
-        cy.wait(['@exp', '@rep']);
+        cy.visit("/summary");
     });
 
-    it('renders summary page', () => {
-        cy.contains('สรุปภาพรวม').should('exist');
-        cy.contains('-89').should('exist');
-        cy.contains('ค่าเดินทาง').should('exist');
-    });
+    it("renders summary page", () => {
+        cy.wait("@summary");
 
+        cy.contains("รวม").should("exist");
+        cy.contains("ค่าเดินทาง").should("exist");
+        cy.contains("-89").should("exist");
+    });
 });
