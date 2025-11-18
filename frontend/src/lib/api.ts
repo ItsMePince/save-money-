@@ -1,6 +1,6 @@
-export const API_BASE =
-    import.meta.env.VITE_API_BASE ||
-    (window.location.hostname === "localhost" ? "http://localhost:8081/api" : "/api");
+export const API_BASE
+    = import.meta.env.VITE_API_BASE || "/api";
+
 
 
 export type ExpenseDTO = {
