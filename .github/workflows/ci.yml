@@ -78,6 +78,7 @@ jobs:
       COMPOSE_FILE: docker-compose.yml
       FRONTEND_URL: http://localhost:3000
       BACKEND_HEALTH: http://localhost:8081/actuator/health
+      CYPRESS_INSTALL_BINARY: 0
     steps:
       - uses: actions/checkout@v4
 
