@@ -227,11 +227,15 @@ export function IncomeCustom() {
                     />
                     <div className="cc-underline" />
                 </div>
-                <button className="cc-confirm" onClick={handleConfirm}>
+                <button className="cc-confirm" onClick={handleConfirm} aria-label="ยืนยัน">
                     <Check className="cc-checkicon" />
                 </button>
             </section>
-
+            {Object.keys(filteredSets).length === 0 && (
+                <div className="cc-noresult">
+                    ไม่พบไอคอนที่ตรงกับ "{query}"
+                </div>
+            )}
             <section className="cc-library">
                 {Object.entries(filteredSets).map(([group, list]) => (
                     <div key={group} className="cc-group" data-cy={`group-${group.replace(/\s|&/g, "")}`}>
