@@ -149,7 +149,7 @@ export function OutcomeCustom() {
                     />
                     <div className="cc-underline" />
                 </div>
-                <button className="cc-confirm" onClick={handleConfirm}>
+                <button className="cc-confirm" onClick={handleConfirm} aria-label="ยืนยัน" >
                     <Check className="cc-checkicon" />
                 </button>
             </section>

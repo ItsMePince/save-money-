@@ -153,7 +153,7 @@ describe("SignUp (Frontend only)", () => {
 
     const fetchMock = globalThis.fetch as unknown as { mock: { calls: any[] } };
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://localhost:8081/api/auth/signup");
+    expect(url).toBe("http://localhost:8081/auth/signup");
     expect(init.method).toBe("POST");
 
     const contentType = new Headers(init.headers as HeadersInit).get("Content-Type");

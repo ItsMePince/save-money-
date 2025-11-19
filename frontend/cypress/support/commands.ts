@@ -11,31 +11,19 @@ declare global {
     }
 }
 
-Cypress.Commands.add('mockLoginFrontendOnly', (username: string = 'admin') => {
-    const user = { username, role: 'USER' }
+Cypress.Commands.add("mockLoginFrontendOnly", (username = "admin") => {
+    cy.window().then((win) => {
+        const user = {
+            id: 1,
+            username,
+            email: username + "@example.com",
+            role: "USER"
+        };
 
-    cy.session(['fe-mock', username], () => {
-        cy.intercept('POST', '/api/auth/login', {
-            statusCode: 200,
-            body: { ok: true, user, token: 'e2e-token' },
-        }).as('apiLogin')
-
-        cy.intercept('GET', '/api/auth/me', {
-            statusCode: 200,
-            body: { ok: true, user },
-        }).as('apiMe')
-
-        cy.visit('/login', { failOnStatusCode: false })
-        cy.window().then((win) => {
-            win.sessionStorage.setItem('isAuthenticated', 'true')
-            win.sessionStorage.setItem('user', JSON.stringify(user))
-            win.localStorage.setItem('auth_user', JSON.stringify(user))
-            win.localStorage.setItem('auth_token', 'e2e-token')
-            win.dispatchEvent(new Event('auth-changed'))
-        })
-        cy.visit('/home', { failOnStatusCode: false })
-        cy.url().should('include', '/home')
-    }, { cacheAcrossSpecs: true })
-})
+        win.sessionStorage.setItem("isAuthenticated", "true");
+        win.sessionStorage.setItem("user", JSON.stringify(user));
+        win.location.href = "/home";
+    });
+});
 
 export {}
