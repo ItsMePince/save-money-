@@ -12,8 +12,6 @@ describe("Summary Page", () => {
     ];
 
     beforeEach(() => {
-        cy.mockLoginFrontendOnly();
-
         cy.intercept("GET", "**/api/accounts*", { statusCode: 200, body: [] });
         cy.intercept("GET", "**/api/repeated-transactions*", { statusCode: 200, body: [] });
         cy.intercept("GET", "**/api/expenses/range*", { statusCode: 200, body: [] });
@@ -23,6 +21,7 @@ describe("Summary Page", () => {
             body: mockExpenses
         }).as("expenses");
 
+        cy.mockLoginFrontendOnly();
         cy.visit("/summary");
     });
 
