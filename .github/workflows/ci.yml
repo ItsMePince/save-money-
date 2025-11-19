@@ -42,7 +42,7 @@ jobs:
         working-directory: frontend
     env:
       CI: true
-      CYPRESS_INSTALL_BINARY: 0   # important
+      CYPRESS_INSTALL_BINARY: 0
     steps:
       - uses: actions/checkout@v4
 
@@ -65,14 +65,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ backend-test ]
     env:
-      IMAGE_NAME: yourdockerhub/financial-backend
+      IMAGE_NAME: pinceme/financial-backend   # ⬅️ แก้ให้ตรง Docker Hub
     steps:
       - uses: actions/checkout@v4
 
       - uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKER_USERNAME }}   # ต้องมีใน Secrets
+          password: ${{ secrets.DOCKER_PASSWORD }}   # ต้องมีใน Secrets
 
       - name: Build & Push Backend
         uses: docker/build-push-action@v5
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ frontend-test ]
     env:
-      IMAGE_NAME: yourdockerhub/financial-frontend
+      IMAGE_NAME: pinceme/financial-frontend  # ⬅️ ตรง Docker Hub
     steps:
       - uses: actions/checkout@v4
 
@@ -125,9 +125,9 @@ jobs:
           cat > docker-compose.override.yml << 'EOF'
           services:
             backend:
-              image: yourdockerhub/financial-backend:latest
+              image: pinceme/financial-backend:latest
             frontend:
-              image: yourdockerhub/financial-frontend:latest
+              image: pinceme/financial-frontend:latest
           EOF
 
       - name: Start services
