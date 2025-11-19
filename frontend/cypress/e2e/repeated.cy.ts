@@ -1,79 +1,90 @@
 // cypress/e2e/repeated.cy.ts
 /// <reference types="cypress" />
 
-describe("Repeated Transactions Page", () => {
+type Tx = {
+    id: number;
+    name: string;
+    account: string;
+    amount: number;
+    date: string;
+    frequency: string;
+};
 
+const PAGE_PATH = '/recurring';
+
+function stubAccounts() {
+    cy.intercept('GET', '**/api/accounts', {
+        statusCode: 200,
+        body: [
+            { id: 1, name: 'K-Bank', amount: 10000 },
+            { id: 2, name: 'SCB', amount: 5000 },
+            { id: 3, name: 'Wallet', amount: 3000 },
+        ],
+    }).as('getAccounts');
+}
+
+function stubIndex(fixture = 'repeated.json') {
+    cy.intercept('GET', '**/api/repeated-transactions*', {
+        statusCode: 200,
+        fixture,
+    }).as('getList');
+}
+
+function stubCreate(afterFixture = 'repeated-after-create.json') {
+    cy.intercept('POST', '**/api/repeated-transactions', (req) => {
+        req.reply({ statusCode: 201, body: { id: 999, ...req.body } });
+    }).as('createTx');
+
+    cy.intercept('GET', '**/api/repeated-transactions*', {
+        statusCode: 200,
+        fixture: afterFixture,
+    }).as('getListAfterCreate');
+}
+
+describe('Repeated Transactions', () => {
     beforeEach(() => {
-        cy.clock(Date.now(), ["Date"]);
+        // ✅ mock login เฉพาะฝั่ง frontend (ใช้ sessionStorage ให้ตรงกับแอป)
+        cy.mockLoginFrontendOnly('e2e');
 
-        // 1) mock login
-        cy.mockLoginFrontendOnly("admin");
+        // ✅ wire API stubs ก่อนเข้าเพจ
+        stubAccounts();
+        stubIndex();
 
-        // 2) ป้องกัน redirect ไป /home (ปัญหาหลักบน CI)
-        cy.window().then((win) => {
-            win.history.pushState({}, "", "/repeated");
-        });
+        // ✅ เข้าเพจด้วย path (baseUrl มาจาก cypress.config.ts)
+        cy.visit(PAGE_PATH);
 
-        // 3) mock API
-        cy.intercept("GET", "**/api/repeated-transactions*", {
-            statusCode: 200,
-            body: []
-        }).as("getList");
-
-        // 4) visit หน้าแบบไม่ fail
-        cy.visit("/repeated", { failOnStatusCode: false });
-
-        // 5) รอ API sync
-        cy.wait("@getList");
-
-        // 6) DEBUG (จำเป็นมากบน CI)
-        cy.document().then((doc) => {
-            const txt = doc.documentElement.innerText.substring(0, 2500);
-            console.log("🔥 PAGE HTML (CI) 🔥\n", txt);
-        });
+        cy.wait('@getList');
     });
 
-    // ----------------------------------------------------
-    // 1) HEADER + EMPTY STATE
-    // ----------------------------------------------------
-    it("แสดงหัวข้อและ empty state ถูกต้อง", () => {
-        cy.contains("ธุรกรรมที่เกิดซ้ำ").should("exist");
-        cy.contains("ยังไม่มีรายการธุรกรรมที่เกิดซ้ำ").should("exist");
+    it('แสดงรายการเริ่มต้น', () => {
+        cy.contains('Netflix Subscription').should('be.visible');
+        cy.contains('Gym Membership').should('be.visible');
     });
 
-    // ----------------------------------------------------
-    // 2) OPEN FORM
-    // ----------------------------------------------------
-    it("สามารถเปิดฟอร์มเพิ่มรายการได้", () => {
-        cy.get("button:has(svg)")
-            .first()
-            .should("be.visible")
-            .click();
+    it('เพิ่มรายการใหม่', () => {
+        stubCreate('repeated-after-create.json');
 
-        cy.contains("เพิ่มธุรกรรมที่เกิดซ้ำ").should("exist");
+        cy.get('.add-btn').click();
+
+        cy.get('input').should('have.length.greaterThan', 0);
+        cy.wait('@getAccounts');
+
+        cy.get('input').eq(0).clear().type('Spotify Family');
+        cy.get('select').eq(0).select('K-Bank');
+        cy.get('input[type="number"]').clear().type('199');
+
+        cy.get('input[type="date"]')
+            .invoke('val', '2025-11-10')
+            .trigger('change', { force: true });
+
+        cy.get('select').eq(1).select('ทุกเดือน');
+
+        // ป้องกัน bottom-nav บัง ปุ่ม
+        cy.get('.submit-btn').scrollIntoView().click({ force: true });
+
+        cy.wait('@createTx');
+        cy.wait('@getListAfterCreate');
+
+        cy.contains('Spotify Family').should('be.visible');
     });
-
-    // ----------------------------------------------------
-    // 3) SUBMIT FORM
-    // ----------------------------------------------------
-    it("สามารถกรอกฟอร์ม + submit ได้", () => {
-        // เปิดฟอร์ม
-        cy.get("button:has(svg)").first().click();
-
-        // กรอกข้อมูล
-        cy.get('input[name="name"]').type("Netflix");
-        cy.get('input[name="amount"]').type("300");
-
-        // mock POST
-        cy.intercept("POST", "**/api/repeated-transactions", {
-            statusCode: 200,
-            body: { success: true }
-        }).as("create");
-
-        // กด submit
-        cy.contains("ยืนยัน").click();
-
-        cy.wait("@create");
-    });
-
 });
