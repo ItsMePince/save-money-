@@ -43,32 +43,41 @@ function stubCreate(afterFixture = 'repeated-after-create.json') {
 
 describe('Repeated Transactions', () => {
     beforeEach(() => {
-        // ✅ mock login เฉพาะฝั่ง frontend (ใช้ sessionStorage ให้ตรงกับแอป)
+        // ✅ mock login เฉพาะฝั่ง frontend
         cy.mockLoginFrontendOnly('e2e');
 
-        // ✅ wire API stubs ก่อนเข้าเพจ
+        // ✅ ติดตั้ง intercepts ทั้งหมดก่อน visit
         stubAccounts();
         stubIndex();
-
-        // ✅ เข้าเพจด้วย path (baseUrl มาจาก cypress.config.ts)
-        cy.visit(PAGE_PATH);
-
-        cy.wait('@getList');
     });
 
     it('แสดงรายการเริ่มต้น', () => {
+        // เข้าเพจหลังจาก stub พร้อมแล้ว
+        cy.visit(PAGE_PATH);
+
+        // รอให้ API ถูกเรียก (ถ้าไม่เกิดใน 5 วิจะ fail)
+        cy.wait('@getList', { timeout: 10000 });
+
+        // ตรวจสอบข้อมูลที่แสดง
         cy.contains('Netflix Subscription').should('be.visible');
         cy.contains('Gym Membership').should('be.visible');
     });
 
     it('เพิ่มรายการใหม่', () => {
+        // ติดตั้ง stub สำหรับ create ก่อน visit
         stubCreate('repeated-after-create.json');
 
+        cy.visit(PAGE_PATH);
+        cy.wait('@getList', { timeout: 10000 });
+
+        // คลิกปุ่มเพิ่ม
         cy.get('.add-btn').click();
 
+        // รอให้ form โหลด
         cy.get('input').should('have.length.greaterThan', 0);
         cy.wait('@getAccounts');
 
+        // กรอกข้อมูล
         cy.get('input').eq(0).clear().type('Spotify Family');
         cy.get('select').eq(0).select('K-Bank');
         cy.get('input[type="number"]').clear().type('199');
@@ -79,12 +88,14 @@ describe('Repeated Transactions', () => {
 
         cy.get('select').eq(1).select('ทุกเดือน');
 
-        // ป้องกัน bottom-nav บัง ปุ่ม
+        // บันทึก (scroll และ force click เพื่อป้องกัน bottom nav)
         cy.get('.submit-btn').scrollIntoView().click({ force: true });
 
-        cy.wait('@createTx');
-        cy.wait('@getListAfterCreate');
+        // รอให้ API สำเร็จ
+        cy.wait('@createTx', { timeout: 10000 });
+        cy.wait('@getListAfterCreate', { timeout: 10000 });
 
+        // ตรวจสอบข้อมูลใหม่
         cy.contains('Spotify Family').should('be.visible');
     });
 });
