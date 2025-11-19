@@ -1,4 +1,5 @@
 describe("Summary Page", () => {
+
     const mockExpenses = [
         {
             id: 1,
