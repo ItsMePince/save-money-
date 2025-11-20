@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ pince3 ]
+    branches: [main]
   pull_request:
-    branches: [ pince3 ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
