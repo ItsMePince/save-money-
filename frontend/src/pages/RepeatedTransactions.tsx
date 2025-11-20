@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './RepeatedTransactions.css';
 import AddTransaction from './AddTransaction';
 import { useLocation, useNavigate } from "react-router-dom"; // <-- Import เพิ่ม
-
-const API_BASE = "http://localhost:8081";
+import { API_BASE } from "../lib/api";
 
 interface Transaction {
     id: number;
@@ -32,7 +31,7 @@ export default function RepeatedTransactions() {
 
     const fetchTransactions = async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/repeated-transactions`, {
+            const res = await fetch(`${API_BASE}/repeated-transactions`, {
                 headers: { Accept: "application/json" },
                 credentials: "include",
             });
@@ -95,7 +94,7 @@ export default function RepeatedTransactions() {
     const handleDelete = async (id: number) => {
         if (window.confirm('คุณต้องการลบธุรกรรมนี้หรือไม่?')) {
             try {
-                const res = await fetch(`${API_BASE}/api/repeated-transactions/${id}`, {
+                const res = await fetch(`${API_BASE}/repeated-transactions/${id}`, {
                     method: 'DELETE',
                     credentials: 'include',
                 });
@@ -131,8 +130,8 @@ export default function RepeatedTransactions() {
         };
 
         const url = isEditing
-            ? `${API_BASE}/api/repeated-transactions/${editingTransaction.id}`
-            : `${API_BASE}/api/repeated-transactions`;
+            ? `${API_BASE}/repeated-transactions/${editingTransaction.id}`
+            : `${API_BASE}/repeated-transactions`;
 
         const method = isEditing ? "PUT" : "POST";
 

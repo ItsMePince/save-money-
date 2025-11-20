@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent, FormEvent } from "react";
 import { UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import "./SignUp.css";
+import { API_BASE } from "../lib/api";
 
 type SignUpValues = {
     email: string;
@@ -63,17 +64,11 @@ const SignUp: React.FC<SignUpProps> = ({ onSubmit, onSignUpSuccess, onSwitchToLo
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:8081/api/auth/signup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    email: form.email,
-                    username: form.username,
-                    password: form.password,
-                }),
+            const response = await fetch(`${API_BASE}/auth/signup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(form),
             });
 
             const data: SignUpResponse = await response.json();

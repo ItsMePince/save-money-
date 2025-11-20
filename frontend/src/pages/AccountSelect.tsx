@@ -4,8 +4,7 @@ import BottomNav from "./buttomnav";
 import { useNavigate } from "react-router-dom";
 import { usePaymentMethod } from "../PaymentMethodContext";
 import { Building2, Banknote, Landmark, CreditCard, Wallet, PiggyBank, Coins } from "lucide-react";
-
-const API_BASE = (import.meta as any)?.env?.VITE_API_BASE || "http://localhost:8081";
+import { API_BASE } from "../lib/api";
 
 type FilterKey = "ทั้งหมด" | "เงินสด" | "ธนาคาร" | "บัตรเครดิต";
 
@@ -77,7 +76,7 @@ export default function AccountSelect() {
     const fetchAndBuildItems = async () => {
         const favs = loadFavs();
         try {
-            const res = await fetch(`${API_BASE}/api/accounts`, {
+            const res = await fetch(`${API_BASE}/accounts`, {
                 headers: { Accept: "application/json" },
                 credentials: "include",
             });

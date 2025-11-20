@@ -6,6 +6,7 @@ import { render, screen, waitFor, fireEvent, within } from "@testing-library/rea
 
 declare global {
     // eslint-disable-next-line no-var
+    // @ts-ignore
     var fetch: any;
 }
 
@@ -228,5 +229,3 @@ describe("Month Page", () => {
     });
 });
 
-
-});

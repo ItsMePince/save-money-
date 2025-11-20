@@ -71,7 +71,7 @@ export default function IncomeStep({ values, setValues, onNext }: Props) {
             />
 
             {/* ให้คลิกได้เสมอ แล้วเช็คใน handleNext */}
-            <FooterNav onNext={handleNext} nextDisabled={false} />
+            <FooterNav onNext={handleNext} nextDisabled={!requiredOk} />
         </div>
     );
 }

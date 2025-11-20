@@ -3,14 +3,19 @@ package my_financial_app.demo;
 import my_financial_app.demo.Entity.Role;
 import my_financial_app.demo.Entity.User;
 import my_financial_app.demo.Repository.UserRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,6 +26,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+
+// ⭐ เพิ่ม annotation นี้ → สร้าง/ล้าง DB ใหม่ทุก test method
+@TestPropertySource(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+})
 class ContentControllerIT {
 
     @Autowired
@@ -94,6 +104,15 @@ class ContentControllerIT {
                 .andExpect(jsonPath("$.users[0].password").doesNotExist());
     }
 
+    @Test
+    void getUsersList_empty_returnsZeroAndEmptyArray() throws Exception {
+        mvc.perform(get("/api/users/list").param("page", "0").param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0))
+                .andExpect(jsonPath("$.users").isArray())
+                .andExpect(jsonPath("$.users.length()").value(0));
+    }
+
     // ---------- /api/public/health ----------
     @Test
     void healthCheck_ok_returnsStatusAndUserCount() throws Exception {
@@ -107,29 +126,10 @@ class ContentControllerIT {
                 .andExpect(jsonPath("$.userCount").value(2))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
-    // ---------- /api/users/list ----------
-    @Test
-    void getUsersList_empty_returnsZeroAndEmptyArray() throws Exception {
-        // ไม่มีผู้ใช้ใน DB → total = 0 และ users = []
-        mvc.perform(get("/api/users/list").param("page", "0").param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.total").value(0))
-                .andExpect(jsonPath("$.users").isArray())
-                .andExpect(jsonPath("$.users.length()").value(0));
-    }
 
-    @Test
-    void getUsersList_errorHandling_returnsBadRequest() throws Exception {
-        // จำลองให้ repository พัง เพื่อดู fallback error (mock repository error)
-        // ใช้ @MockBean เฉพาะคลาสแยก เช่น ContentControllerErrorIT
-        // แต่ถ้าใน Full Integration Test จริง จะข้ามได้
-    }
-
-    // ---------- /api/dashboard/stats ----------
+    // ---------- fallback tests (Optional) ----------
     @Test
     void getDashboardStats_fallback_returnsZerosWhenError() throws Exception {
-        // จำลอง error โดยการทำ repository พัง (ใน Full Integration อาจต้องแยกคลาส mock)
-        // คาดหวังว่า fallback จะคืนค่าทุก field = 0
         mvc.perform(get("/api/dashboard/stats"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalUsers").exists())
@@ -138,10 +138,8 @@ class ContentControllerIT {
                 .andExpect(jsonPath("$.revenue").exists());
     }
 
-    // ---------- /api/public/health ----------
     @Test
     void healthCheck_shouldReturnWarning_whenDatabaseError() throws Exception {
-        // อันนี้ทำได้เฉพาะถ้า mock repo ได้ แต่ถ้าใช้ DB จริงให้ test เฉพาะเคสปกติ
         mvc.perform(get("/api/public/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("OK"))
@@ -149,5 +147,4 @@ class ContentControllerIT {
                 .andExpect(jsonPath("$.userCount").exists())
                 .andExpect(jsonPath("$.timestamp").exists());
     }
-
 }

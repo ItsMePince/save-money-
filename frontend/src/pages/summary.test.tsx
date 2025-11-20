@@ -1,262 +1,210 @@
-// src/pages/SignUp.test.tsx
+// src/pages/Summary.test.tsx
 import React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import SignUp from "./SignUp";
 
-// -------- helpers --------
-function typeIntoForm({
-  email = "me@example.com",
-  username = "me",
-  password = "secret6",
-}: { email?: string; username?: string; password?: string }) {
-  if (email !== undefined) {
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: email } });
-  }
-  if (username !== undefined) {
-    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: username } });
-  }
-  if (password !== undefined) {
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: password } });
-  }
+import Summary from "./summary";
+import * as api from "../lib/api";
+
+vi.mock("../lib/api", () => ({
+    fetchAllTransactions: vi.fn(),
+    API_BASE: "http://localhost:8000",
+}));
+
+vi.mock("react-router-dom", async () => {
+    const actual = await vi.importActual("react-router-dom");
+    return {
+        ...actual,
+        useNavigate: () => mockNavigate,
+    };
+});
+
+const mockNavigate = vi.fn();
+
+function mockFetchReturn(data: any, ok = true) {
+    global.fetch = vi.fn().mockResolvedValue({
+        ok,
+        json: async () => data,
+    }) as any;
 }
 
-function mockFetchOnce(data: any, ok = true) {
-  (globalThis.fetch as any) = vi.fn().mockResolvedValueOnce({
-    ok,
-    json: async () => data,
-  } as Response);
-}
-
-describe("SignUp (Frontend only)", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    vi.spyOn(window.localStorage.__proto__, "setItem");
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("เรนเดอร์ฟอร์มได้ครบและมีลิงก์ Login", () => {
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
-
-    expect(screen.getByRole("heading", { name: /sign up/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    const loginLink = screen.getByRole("link", { name: /login/i });
-    expect(loginLink).toHaveAttribute("href", "/login");
-  });
-
-  it("validate: ต้องกรอกข้อมูลให้ครบถ้วน", async () => {
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
-    expect(await screen.findByText(/กรุณากรอกข้อมูลให้ครบถ้วน/i)).toBeInTheDocument();
-  });
-
-  it("validate: รหัสผ่านต้องยาวอย่างน้อย 6 ตัวอักษร", async () => {
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
-
-    typeIntoForm({ email: "a@b.com", username: "abc", password: "12345" });
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
-    expect(await screen.findByText(/รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร/i)).toBeInTheDocument();
-  });
-
-  it("เมื่อเริ่มพิมพ์ใหม่แล้ว error เดิมถูกล้าง", async () => {
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
-    expect(await screen.findByText(/กรุณากรอกข้อมูลให้ครบถ้วน/i)).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "me@x.com" } });
-    expect(screen.queryByText(/กรุณากรอกข้อมูลให้ครบถ้วน/i)).not.toBeInTheDocument();
-  });
-
-  it("loading: ปุ่มและช่องกรอกถูก disabled ระหว่างส่งข้อมูล", async () => {
-    mockFetchOnce({ success: false, message: "x" });
-
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
-
-    typeIntoForm({});
-    const submit = screen.getByRole("button", { name: /create account/i });
-
-    fireEvent.click(submit);
-    expect(submit).toBeDisabled();
-    expect(submit).toHaveTextContent(/กำลังสมัครสมาชิก/i);
-
-    await waitFor(() => {
-      expect(submit).not.toBeDisabled();
-      expect(submit).toHaveTextContent(/create account/i);
-    });
-  });
-
-  it("เส้นทาง onSubmit prop: เรียก callback ด้วยค่าฟอร์ม และไม่เรียก fetch", async () => {
-    const onSubmit = vi.fn();
-    (globalThis.fetch as any) = vi.fn();
-
-    render(
-      <MemoryRouter>
-        <SignUp onSubmit={onSubmit} />
-      </MemoryRouter>
-    );
-
-    typeIntoForm({ email: "me@x.com", username: "me", password: "secret6" });
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
-
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith({
-        email: "me@x.com",
-        username: "me",
-        password: "secret6",
-      });
+describe("Summary Page", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
     });
 
-    expect(globalThis.fetch as any).not.toHaveBeenCalled();
-  });
-
-  it("เรียก fetch ด้วยพารามิเตอร์ที่ถูกต้องเมื่อไม่มี onSubmit prop", async () => {
-    mockFetchOnce({ success: false, message: "x" });
-
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
-
-    typeIntoForm({ email: "a@b.com", username: "abc", password: "secret6" });
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
-
-    await waitFor(() => expect(globalThis.fetch as any).toHaveBeenCalled());
-
-    const fetchMock = globalThis.fetch as unknown as { mock: { calls: any[] } };
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://localhost:8081/api/auth/signup");
-    expect(init.method).toBe("POST");
-
-    const contentType = new Headers(init.headers as HeadersInit).get("Content-Type");
-    expect(contentType).toBe("application/json");
-
-    const bodyObj = JSON.parse(String(init.body));
-    expect(bodyObj).toEqual({
-      email: "a@b.com",
-      username: "abc",
-      password: "secret6",
-    });
-  });
-
-  it("API success: เก็บ user ใน localStorage และเรียก onSignUpSuccess", async () => {
-    const fakeUser = { username: "me", email: "me@x.com", role: "member" };
-    mockFetchOnce({ success: true, user: fakeUser });
-    const onSignUpSuccess = vi.fn();
-
-    render(
-      <MemoryRouter>
-        <SignUp onSignUpSuccess={onSignUpSuccess} />
-      </MemoryRouter>
-    );
-
-    typeIntoForm({});
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
-
-    await waitFor(() => {
-      expect(localStorage.setItem).toHaveBeenCalledWith("user", JSON.stringify(fakeUser));
-      expect(onSignUpSuccess).toHaveBeenCalledWith(fakeUser);
-    });
-  });
-
-  it("API success (ไม่มี onSignUpSuccess): redirect ไป /Home", async () => {
-    const fakeUser = { username: "me", email: "me@x.com", role: "member" };
-    mockFetchOnce({ success: true, user: fakeUser });
-
-    const originalLocation = window.location;
-    Object.defineProperty(window, "location", {
-      value: { ...originalLocation, href: "" },
-      writable: true,
+    it("แสดง Loading ตอนเริ่มโหลด", () => {
+        (api.fetchAllTransactions as any).mockResolvedValue([]);
+        render(
+            <MemoryRouter>
+                <Summary />
+            </MemoryRouter>
+        );
+        expect(screen.getByText(/กำลังโหลดข้อมูล/i)).toBeInTheDocument();
     });
 
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
+    it("แสดงข้อความ error เมื่อ fetch fail", async () => {
+        (api.fetchAllTransactions as any).mockRejectedValue(new Error("เซิร์ฟเวอร์พัง"));
 
-    typeIntoForm({});
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+        render(
+            <MemoryRouter>
+                <Summary />
+            </MemoryRouter>
+        );
 
-    await waitFor(() => {
-      expect(window.location.href).toBe("/Home");
+        expect(await screen.findByText(/เซิร์ฟเวอร์พัง/i)).toBeInTheDocument();
     });
 
-    Object.defineProperty(window, "location", { value: originalLocation });
-  });
+    it("โหลดข้อมูลสำเร็จแล้วแสดง day-card พร้อมรายการ", async () => {
+        (api.fetchAllTransactions as any).mockResolvedValue([
+            {
+                id: 1,
+                category: "อาหาร",
+                type: "EXPENSE",
+                amount: 100,
+                date: "2025-01-10",
+                paymentMethod: "เงินสด",
+            },
+            {
+                id: 2,
+                category: "ของขวัญ",
+                type: "INCOME",
+                amount: 300,
+                date: "2025-01-10",
+                paymentMethod: "SCB",
+            },
+        ]);
 
-  it("API error: แสดงข้อความจาก server", async () => {
-    mockFetchOnce({ success: false, message: "อีเมลนี้มีผู้ใช้งานแล้ว" });
+        render(
+            <MemoryRouter>
+                <Summary />
+            </MemoryRouter>
+        );
 
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
+        expect(await screen.findByText(/อาหาร/i)).toBeInTheDocument();
+        expect(screen.getByText(/ของขวัญ/i)).toBeInTheDocument();
 
-    typeIntoForm({});
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+        // รวม 2 รายการ ในวันเดียว
+        expect(screen.getByText(/รวม:/i)).toBeInTheDocument();
+    });
 
-    expect(await screen.findByText(/อีเมลนี้มีผู้ใช้งานแล้ว/i)).toBeInTheDocument();
-  });
+    it("คลิก row แล้วเปิด detail overlay", async () => {
+        (api.fetchAllTransactions as any).mockResolvedValue([
+            {
+                id: 1,
+                category: "อาหาร",
+                type: "EXPENSE",
+                amount: 150,
+                date: "2025-01-11",
+                paymentMethod: "เงินสด",
+            },
+        ]);
 
-  it("API error (ไม่มี message): ใช้ fallback 'การสมัครสมาชิกล้มเหลว'", async () => {
-    mockFetchOnce({ success: false });
+        render(
+            <MemoryRouter>
+                <Summary />
+            </MemoryRouter>
+        );
 
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
+        // รอจนข้อมูลโหลดเสร็จ
+        const title = await screen.findByText("อาหาร");
 
-    typeIntoForm({});
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+        // หา row แท้ ๆ
+        const row = title.closest(".row");
+        expect(row).not.toBeNull();
 
-    expect(await screen.findByText(/การสมัครสมาชิกล้มเหลว/i)).toBeInTheDocument();
-  });
+        fireEvent.click(row!);
 
-  it("Network error: แสดงข้อความภาษาไทยตามที่กำหนด", async () => {
-    (globalThis.fetch as any) = vi.fn().mockRejectedValueOnce(new Error("Network down"));
+        expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
 
-    render(
-      <MemoryRouter>
-        <SignUp />
-      </MemoryRouter>
-    );
 
-    typeIntoForm({});
-    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+    it("กดปุ่ม X แล้วปิด overlay", async () => {
+        (api.fetchAllTransactions as any).mockResolvedValue([
+            {
+                id: 1,
+                category: "อาหาร",
+                type: "EXPENSE",
+                amount: 150,
+                date: "2025-01-11",
+                paymentMethod: "เงินสด",
+            },
+        ]);
 
-    expect(
-      await screen.findByText(/เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง/i)
-    ).toBeInTheDocument();
-  });
+        render(
+            <MemoryRouter>
+                <Summary />
+            </MemoryRouter>
+        );
+
+        await waitFor(() => fireEvent.click(screen.getByText("อาหาร")));
+
+        const closeBtn = screen.getByRole("button", { name: /ปิด/i });
+        fireEvent.click(closeBtn);
+
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("คลิกแก้ไข → navigate ถูกเรียก", async () => {
+        (api.fetchAllTransactions as any).mockResolvedValue([
+            {
+                id: 1,
+                category: "อาหาร",
+                type: "EXPENSE",
+                amount: 150,
+                date: "2025-01-11",
+                paymentMethod: "เงินสด",
+            },
+        ]);
+
+        render(
+            <MemoryRouter>
+                <Summary />
+            </MemoryRouter>
+        );
+
+        await waitFor(() => fireEvent.click(screen.getByText("อาหาร")));
+
+        fireEvent.click(screen.getByRole("button", { name: /แก้ไข/i }));
+
+        expect(mockNavigate).toHaveBeenCalled();
+        expect(mockNavigate.mock.calls[0][0]).toMatch(/expense-edit|income-edit/);
+    });
+
+    it("กดลบแล้ว fetch DELETE ถูกเรียก", async () => {
+        mockFetchReturn({}, true);
+
+        (api.fetchAllTransactions as any).mockResolvedValue([
+            {
+                id: 5,
+                category: "กาแฟ",
+                type: "EXPENSE",
+                amount: 80,
+                date: "2025-01-12",
+                paymentMethod: "เงินสด",
+            },
+        ]);
+
+        vi.spyOn(window, "confirm").mockReturnValue(true);
+
+        render(
+            <MemoryRouter>
+                <Summary />
+            </MemoryRouter>
+        );
+
+        await waitFor(() => fireEvent.click(screen.getByText("กาแฟ")));
+
+        fireEvent.click(screen.getByRole("button", { name: /ลบ/i }));
+
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalled();
+        });
+
+        const [url, opts] = (global.fetch as any).mock.calls[0];
+
+        expect(opts.method).toBe("DELETE");
+        expect(url).toBe("http://localhost:8000/expenses/5");
+    });
 });

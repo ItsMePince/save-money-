@@ -13,10 +13,10 @@ vi.mock("react-router-dom", async () => {
 
 function mockFetchOnce(data: any, ok = true) {
   (globalThis.fetch as any) = vi.fn().mockResolvedValueOnce({
-    ok,
-    json: async () => data,
-    headers: { get: () => "application/json" },
-  } as Response);
+      ok,
+      json: async () => data,
+      headers: {get: () => "application/json"},
+  } as unknown as Response);
 }
 
 const isAnyLoginError = (txt: string) =>
@@ -116,10 +116,10 @@ describe("Login Frontend", () => {
   it("เรียก fetch ด้วยพารามิเตอร์ที่ถูกต้อง", async () => {
     const fakeUser = { username: "u", role: "member" };
     const fetchSpy = vi.spyOn(globalThis, "fetch" as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: true, user: fakeUser }),
-      headers: { get: () => "application/json" },
-    } as Response);
+        ok: true,
+        json: async () => ({success: true, user: fakeUser}),
+        headers: {get: () => "application/json"},
+    } as unknown as Response);
     render(
       <MemoryRouter>
         <Login />
@@ -130,8 +130,8 @@ describe("Login Frontend", () => {
     fireEvent.click(screen.getByRole("button", { name: /login/i }));
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
     const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("http://localhost:8081/api/auth/login");
-    expect(options.method).toBe("POST");
+      expect(url).toMatch(/auth\/login$/);
+      expect(options.method).toBe("POST");
     const contentType = new Headers(options.headers as HeadersInit).get("Content-Type");
     expect(contentType).toBe("application/json");
     expect(options.credentials).toBe("include");
@@ -140,10 +140,10 @@ describe("Login Frontend", () => {
 
   it("ช่องกรอกถูก disabled ระหว่าง loading", async () => {
     (globalThis.fetch as any) = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ success: false, message: "x" }),
-      headers: { get: () => "application/json" },
-    } as Response);
+        ok: true,
+        json: async () => ({success: false, message: "x"}),
+        headers: {get: () => "application/json"},
+    } as unknown as Response);
     render(
       <MemoryRouter>
         <Login />
@@ -182,12 +182,12 @@ describe("Login Frontend", () => {
 
   it("ใช้ fallback เมื่อ server ไม่ส่ง message (แสดงสถานะหรือข้อความ Invalid response)", async () => {
     (globalThis.fetch as any) = vi.fn().mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      statusText: "Bad Request",
-      headers: { get: () => "application/json" },
-      json: async () => ({ success: false }),
-    } as Response);
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        headers: {get: () => "application/json"},
+        json: async () => ({success: false}),
+    } as unknown as Response);
     render(
       <MemoryRouter>
         <Login />

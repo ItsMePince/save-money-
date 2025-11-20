@@ -1,4 +1,4 @@
-// pages/tax/steps/01-Income/IncomeStep.test.tsx
+// pages/tax/steps/01-IncomeIncomeStep.test.tsx
 import React, { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";

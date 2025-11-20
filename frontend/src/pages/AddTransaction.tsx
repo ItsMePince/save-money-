@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './AddTransaction.css';
+import { API_BASE } from "../lib/api";
 
 interface AddTransactionProps {
     onCancel: () => void;
@@ -22,7 +23,6 @@ type Account = {
     iconKey?: string
 };
 
-const API_BASE = (import.meta as any)?.env?.VITE_API_BASE || "http://localhost:8081";
 
 function formatDateToDDMMYYYY(dateString: string): string {
     if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return '';
@@ -77,7 +77,7 @@ const AddTransaction: React.FC<AddTransactionProps> = ({
     useEffect(() => {
         const fetchAccounts = async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/accounts`, {
+                const res = await fetch(`${API_BASE}/accounts`, {
                     headers: { Accept: "application/json" },
                     credentials: "include",
                 });

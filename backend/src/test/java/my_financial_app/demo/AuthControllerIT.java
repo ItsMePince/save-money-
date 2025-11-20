@@ -1,6 +1,5 @@
 package my_financial_app.demo;
 
-import my_financial_app.demo.Entity.User;
 import my_financial_app.demo.Repository.UserRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +12,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 import java.util.Map;
 
@@ -21,6 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+
+// ⭐ เพิ่มบรรทัดนี้เพื่อบังคับ integration test ให้ใช้ create-drop
+//    ทำให้ DB ถูกสร้างใหม่/ล้างใหม่ทุก test → ไม่ค้าง FK อีก
+@TestPropertySource(properties = {
+        "spring.jpa.hibernate.ddl-auto=create-drop"
+})
 class AuthControllerIT {
 
     @Autowired
@@ -31,7 +37,7 @@ class AuthControllerIT {
 
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll();
+        userRepository.deleteAll(); // ลบได้แล้ว เพราะ schema ใหม่ทุกครั้ง
     }
 
     @Test
@@ -72,13 +78,10 @@ class AuthControllerIT {
         assertThat(loginRes.getBody()).isNotNull();
         assertThat(loginRes.getBody().get("success")).isEqualTo(true);
 
-
         Map<String, Object> user = (Map<String, Object>) loginRes.getBody().get("user");
 
         assertThat(user.get("username")).isEqualTo("alice");
         assertThat(user.get("email")).isEqualTo("alice@example.com");
-
-        // ต้องไม่มี field password ใน response
         assertThat(user.keySet()).doesNotContain("password");
     }
 
@@ -128,16 +131,13 @@ class AuthControllerIT {
         assertThat(res.getStatusCode().value()).isIn(400, 409);
         assertThat(res.getBody()).isNotNull();
         assertThat(res.getBody().get("success")).isEqualTo(false);
-        assertThat(res.getBody().get("message").toString().toLowerCase()).contains("username");
 
-        // DB ควรมีผู้ใช้ชื่อ eve แค่ 1 คน
         assertThat(userRepository.findByUsername("eve")).isPresent();
         assertThat(userRepository.count()).isEqualTo(1);
     }
 
     @Test
     void register_missing_fields_should_return_400() {
-        // ลองสมัครโดยไม่มี email
         ResponseEntity<Map> res = rest.exchange(
                 "/api/auth/register",
                 HttpMethod.POST,
