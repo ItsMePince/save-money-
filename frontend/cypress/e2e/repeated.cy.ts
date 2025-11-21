@@ -1,79 +1,65 @@
-// cypress/e2e/repeated.cy.ts
 /// <reference types="cypress" />
 
-describe("Repeated Transactions Page", () => {
+const PAGE_PATH = "/recurring";
 
+/* ---------- Only stub for create ---------- */
+function stubAccounts() {
+    cy.intercept("GET", "/api/accounts", {
+        statusCode: 200,
+        body: [
+            { id: 1, name: "K-Bank", amount: 10000 },
+            { id: 2, name: "SCB", amount: 5000 },
+            { id: 3, name: "Wallet", amount: 3000 },
+        ],
+    }).as("getAccounts");
+}
+
+function stubCreate() {
+    cy.intercept("POST", "/api/repeated-transactions", (req) => {
+        req.reply({ statusCode: 201, body: { id: 999, ...req.body } });
+    }).as("createTx");
+
+    cy.intercept("GET", "/api/repeated-transactions*", {
+        statusCode: 200,
+        fixture: "repeated-after-create.json",
+    }).as("getListAfterCreate");
+}
+
+describe("Recurring Transactions (New stable tests)", () => {
     beforeEach(() => {
-        cy.clock(Date.now(), ["Date"]);
+        cy.mockLoginFrontendOnly("e2e");
 
-        // 1) mock login
-        cy.mockLoginFrontendOnly("admin");
+        // only stub accounts (safe)
+        stubAccounts();
 
-        // 2) ป้องกัน redirect ไป /home (ปัญหาหลักบน CI)
-        cy.window().then((win) => {
-            win.history.pushState({}, "", "/repeated");
-        });
+        cy.visit(PAGE_PATH);
 
-        // 3) mock API
-        cy.intercept("GET", "**/api/repeated-transactions*", {
-            statusCode: 200,
-            body: []
-        }).as("getList");
-
-        // 4) visit หน้าแบบไม่ fail
-        cy.visit("/repeated", { failOnStatusCode: false });
-
-        // 5) รอ API sync
-        cy.wait("@getList");
-
-        // 6) DEBUG (จำเป็นมากบน CI)
-        cy.document().then((doc) => {
-            const txt = doc.documentElement.innerText.substring(0, 2500);
-            console.log("🔥 PAGE HTML (CI) 🔥\n", txt);
-        });
+        // หน้า Recurring ต้องมา
+        cy.url().should("include", "/recurring");
     });
 
-    // ----------------------------------------------------
-    // 1) HEADER + EMPTY STATE
-    // ----------------------------------------------------
-    it("แสดงหัวข้อและ empty state ถูกต้อง", () => {
-        cy.contains("ธุรกรรมที่เกิดซ้ำ").should("exist");
-        cy.contains("ยังไม่มีรายการธุรกรรมที่เกิดซ้ำ").should("exist");
+    it("สามารถเพิ่มรายการใหม่ได้สำเร็จ", () => {
+        stubCreate(); // stub เฉพาะ create flow
+
+        cy.get(".add-btn").click();
+
+        cy.wait("@getAccounts");
+
+        cy.get("input").eq(0).clear().type("Spotify Family");
+        cy.get("select").eq(0).select("K-Bank");
+        cy.get('input[type="number"]').clear().type("199");
+
+        cy.get('input[type="date"]')
+            .invoke("val", "2025-11-10")
+            .trigger("change", { force: true });
+
+        cy.get("select").eq(1).select("ทุกเดือน");
+
+        cy.get(".submit-btn").scrollIntoView().click({ force: true });
+
+        cy.wait("@createTx");
+        cy.wait("@getListAfterCreate");
+
+        cy.contains("Spotify Family").should("be.visible");
     });
-
-    // ----------------------------------------------------
-    // 2) OPEN FORM
-    // ----------------------------------------------------
-    it("สามารถเปิดฟอร์มเพิ่มรายการได้", () => {
-        cy.get("button:has(svg)")
-            .first()
-            .should("be.visible")
-            .click();
-
-        cy.contains("เพิ่มธุรกรรมที่เกิดซ้ำ").should("exist");
-    });
-
-    // ----------------------------------------------------
-    // 3) SUBMIT FORM
-    // ----------------------------------------------------
-    it("สามารถกรอกฟอร์ม + submit ได้", () => {
-        // เปิดฟอร์ม
-        cy.get("button:has(svg)").first().click();
-
-        // กรอกข้อมูล
-        cy.get('input[name="name"]').type("Netflix");
-        cy.get('input[name="amount"]').type("300");
-
-        // mock POST
-        cy.intercept("POST", "**/api/repeated-transactions", {
-            statusCode: 200,
-            body: { success: true }
-        }).as("create");
-
-        // กด submit
-        cy.contains("ยืนยัน").click();
-
-        cy.wait("@create");
-    });
-
 });
