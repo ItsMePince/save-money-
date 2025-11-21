@@ -8,7 +8,7 @@ on:
 jobs:
   build_and_push:
     name: Build & Push Docker Images
-    runs-on: self-hosted
+    runs-on: ubuntu-latest          # 👈 กลับไปใช้ ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -22,17 +22,11 @@ jobs:
 
       # Build backend image from ./backend/Dockerfile
       - name: Build Backend Image
-        run: |
-          docker build \
-            -t ${{ secrets.DOCKER_USERNAME }}/my-finapp-backend:latest \
-            ./backend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-finapp-backend:latest ./backend
 
       # Build frontend image from ./frontend/Dockerfile
       - name: Build Frontend Image
-        run: |
-          docker build \
-            -t ${{ secrets.DOCKER_USERNAME }}/my-finapp-frontend:latest \
-            ./frontend
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/my-finapp-frontend:latest ./frontend
 
       # Push images to Docker Hub
       - name: Push Backend Image
@@ -41,28 +35,23 @@ jobs:
       - name: Push Frontend Image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/my-finapp-frontend:latest
 
+
   deploy:
-    name: Apply deploy.yaml to Kubernetes
-    runs-on: ubuntu-latest
+    name: Apply deploy.yaml to Docker Desktop Kubernetes
+    runs-on: self-hosted            # 👈 deploy เท่านั้นที่ใช้ self-hosted
     needs: build_and_push
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: "latest"
-
-      - name: Configure kubeconfig
+      - name: Check kubectl context
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+          kubectl config current-context
+          kubectl get nodes
 
       - name: Apply Kubernetes manifests
         run: |
-          # ใช้ไฟล์ที่อยู่ใน root ของ repo
           kubectl apply -f deploy.yaml
           kubectl apply -f ingress.yaml
 
