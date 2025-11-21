@@ -322,21 +322,23 @@ export default function Summary() {
     const onEdit = (it: Item) => {
         const isRepeated = it.note?.includes("(ซ้ำ:");
         if (isRepeated) {
-            navigate('/repeated-transactions', { state: { editId: it.id } });
-        } else {
-            setForm(itemToForm(it));
-            setEditMode(true);
-            setSelected(it);
-            const f = itemToForm(it);
-            const route = f.typeLabel === "รายได้" ? "/income-edit" : "/expense-edit";
-            navigate(route, { state: { mode: "edit", data: { ...f, id: it.id } } });
+            navigate("/recurring", { state: { editId: it.id } });
+            return;
         }
+
+        // เคสปกติ แก้ไขรายรับ/รายจ่ายเดี่ยว
+        const f = itemToForm(it);
+        setForm(f);
+        setEditMode(true);
+        setSelected(it);
+        const route = f.typeLabel === "รายได้" ? "/income-edit" : "/expense-edit";
+        navigate(route, { state: { mode: "edit", data: { ...f, id: it.id } } });
     };
 
     const tryDeleteEndpoints = async (id: number, note: string | undefined) => {
         const isRepeated = note?.includes("(ซ้ำ:");
         const url = isRepeated
-            ? `${API_BASE}/repeated-transactions/${id}`
+            ? `${API_BASE}/recurring/${id}`
             : `${API_BASE}/expenses/${id}`;
         const res = await fetch(url, { method: "DELETE", credentials: "include" });
         return res.ok;
@@ -396,11 +398,11 @@ export default function Summary() {
                         <header className="day-header">
                             <span className="day-date">{day.label}</span>
                             <span className="day-total">
-                รวม:{" "}
+                                รวม:{" "}
                                 <b className={day.total < 0 ? "neg" : "pos"}>
-                  {signedAmountText(day.total)} ฿
-                </b>
-              </span>
+                                    {signedAmountText(day.total)} ฿
+                                </b>
+                            </span>
                         </header>
 
                         <div className="day-body">
@@ -455,17 +457,17 @@ export default function Summary() {
                                 <div className="kv">
                                     <span className="k">จำนวนเงิน</span>
                                     <span className={`v ${selected.amount < 0 ? "neg" : "pos"}`}>
-                    {Math.abs(selected.amount).toLocaleString()} ฿
-                  </span>
+                                        {Math.abs(selected.amount).toLocaleString()} ฿
+                                    </span>
                                 </div>
                                 <div className="kv">
                                     <span className="k">วันที่</span>
                                     <span className="v">
-                    {(() => {
-                        const d = parseIsoDateToLocal(selected.isoDate);
-                        return ddmmyyyy(d);
-                    })()}
-                  </span>
+                                        {(() => {
+                                            const d = parseIsoDateToLocal(selected.isoDate);
+                                            return ddmmyyyy(d);
+                                        })()}
+                                    </span>
                                 </div>
                                 <div className="kv">
                                     <span className="k">เวลา</span>
