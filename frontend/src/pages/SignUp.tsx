@@ -44,8 +44,20 @@ const SignUp: React.FC<SignUpProps> = ({ onSubmit, onSignUpSuccess, onSwitchToLo
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
+        const formElement = e.currentTarget;
+        if (!formElement.checkValidity()) {
+            formElement.reportValidity();
+            return;
+        }
+
         if (!form.email || !form.username || !form.password) {
             setError("กรุณากรอกข้อมูลให้ครบถ้วน");
+            return;
+        }
+
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(form.email.trim())) {
+            setError("กรุณากรอกอีเมลให้ถูกต้อง");
             return;
         }
 
@@ -74,19 +86,19 @@ const SignUp: React.FC<SignUpProps> = ({ onSubmit, onSignUpSuccess, onSwitchToLo
             const data: SignUpResponse = await response.json();
 
             if (data.success && data.user) {
-                sessionStorage.setItem('user', JSON.stringify(data.user));
+                sessionStorage.setItem("user", JSON.stringify(data.user));
 
                 if (onSignUpSuccess) {
                     onSignUpSuccess(data.user);
                 } else {
-                    window.location.href = '/Home';
+                    window.location.href = "/Home";
                 }
             } else {
-                setError(data.message || 'การสมัครสมาชิกล้มเหลว');
+                setError(data.message || "การสมัครสมาชิกล้มเหลว");
             }
         } catch (error) {
-            console.error('Signup error:', error);
-            setError('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง');
+            console.error("Signup error:", error);
+            setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง");
         } finally {
             setLoading(false);
         }
@@ -101,7 +113,7 @@ const SignUp: React.FC<SignUpProps> = ({ onSubmit, onSignUpSuccess, onSwitchToLo
 
                 <h1 className="su-title">Sign up</h1>
 
-                <form className="su-form" onSubmit={handleSubmit} noValidate>
+                <form className="su-form" onSubmit={handleSubmit}>
                     <label htmlFor="email" className="su-label">
                         Email
                     </label>
@@ -150,22 +162,24 @@ const SignUp: React.FC<SignUpProps> = ({ onSubmit, onSignUpSuccess, onSwitchToLo
                     />
 
                     {error && (
-                        <div style={{
-                            color: '#ef4444',
-                            fontSize: '14px',
-                            textAlign: 'center',
-                            margin: '8px 0',
-                            padding: '8px',
-                            background: '#fef2f2',
-                            borderRadius: '8px',
-                            border: '1px solid #fecaca'
-                        }}>
+                        <div
+                            style={{
+                                color: "#ef4444",
+                                fontSize: "14px",
+                                textAlign: "center",
+                                margin: "8px 0",
+                                padding: "8px",
+                                background: "#fef2f2",
+                                borderRadius: "8px",
+                                border: "1px solid #fecaca",
+                            }}
+                        >
                             {error}
                         </div>
                     )}
 
                     <button type="submit" className="su-submit" disabled={loading}>
-                        {loading ? 'กำลังสมัครสมาชิก...' : 'Create account'}
+                        {loading ? "กำลังสมัครสมาชิก..." : "Create account"}
                     </button>
                 </form>
 

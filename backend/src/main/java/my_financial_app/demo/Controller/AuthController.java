@@ -22,19 +22,16 @@ import my_financial_app.demo.Repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/auth")
-// รองรับ fetch(..., { credentials: 'include' })
 @CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}, allowCredentials = "true")
 public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
 
-    // --------- LOGIN ----------
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
-            // ใช้ช่องเดียวเป็นตัวระบุ จะกรอก username หรือ email ก็ได้
             String identifier = safeTrim(request.getUsername());
             String password   = safeTrim(request.getPassword());
 
@@ -44,18 +41,15 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // หา user ได้ทั้งสองทาง: username หรือ email
             Optional<User> userOpt = userRepository.findByUsernameOrEmail(identifier, identifier);
 
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
 
-                // เดโม: เทียบ plain text (โปรดเปลี่ยนเป็น BCrypt ในโปรดักชัน)
                 if (password.equals(user.getPassword())) {
                     user.setLastLogin(LocalDateTime.now());
                     userRepository.save(user);
 
-                    // ✅ สร้าง/รียูส session แล้วเก็บ username ไว้
                     HttpSession session = httpRequest.getSession(true);
                     session.setAttribute("username", user.getUsername());
 
@@ -86,7 +80,6 @@ public class AuthController {
         }
     }
 
-    // --------- REGISTER ----------
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterRequest request) {
         Map<String, Object> response = new HashMap<>();
@@ -95,19 +88,24 @@ public class AuthController {
             String email    = safeTrim(request.getEmail());
             String password = safeTrim(request.getPassword());
 
-            // validation พื้นฐาน
             if (isBlank(username) || isBlank(email) || isBlank(password)) {
                 response.put("success", false);
                 response.put("message", "กรุณากรอกข้อมูลให้ครบถ้วน");
                 return ResponseEntity.badRequest().body(response);
             }
+
+            if (!isValidEmail(email)) {
+                response.put("success", false);
+                response.put("message", "รูปแบบอีเมลไม่ถูกต้อง");
+                return ResponseEntity.badRequest().body(response);
+            }
+
             if (password.length() < 6) {
                 response.put("success", false);
                 response.put("message", "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // unique checks
             if (userRepository.existsByUsername(username)) {
                 response.put("success", false);
                 response.put("message", "Username already exists");
@@ -119,7 +117,6 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // สร้างผู้ใช้ใหม่ (ไม่มี name)
             User newUser = new User(username, password, email);
             User savedUser = userRepository.save(newUser);
 
@@ -140,7 +137,6 @@ public class AuthController {
         }
     }
 
-    // ให้ frontend เรียก /signup ได้ด้วย (ใช้ logic เดียวกับ /register)
     @PostMapping("/signup")
     public ResponseEntity<Map<String, Object>> signup(@RequestBody RegisterRequest request) {
         return register(request);
@@ -149,7 +145,7 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest httpRequest) {
         HttpSession session = httpRequest.getSession(false);
-        if (session != null) session.invalidate(); // ✅ ลบ session
+        if (session != null) session.invalidate();
         Map<String, String> response = new HashMap<>();
         response.put("success", "true");
         response.put("message", "Logout successful");
@@ -174,14 +170,21 @@ public class AuthController {
         }
     }
 
-    // --------- utils ----------
-    private static String safeTrim(String s) { return s == null ? null : s.trim(); }
-    private static boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }
+    private static String safeTrim(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private static boolean isValidEmail(String email) {
+        return email != null && email.contains("@");
+    }
 }
 
-// ------- DTOs --------
 class LoginRequest {
-    private String username; // ใช้เป็นตัวระบุ: ใส่ได้ทั้ง username หรือ email
+    private String username;
     private String password;
 
     public String getUsername() { return username; }
